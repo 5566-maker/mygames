@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-arcade-v1.0.0';
+const CACHE_NAME = 'kids-arcade-v1.0.1';
 
 const PRECACHE_URLS = [
   './',
@@ -49,34 +49,34 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  // Only handle GET requests
-  if (request.method !== 'GET') return;
+  // Only handle GET requests with http/https scheme
+  if (request.method !== 'GET' || !request.url.startsWith('http')) return;
 
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch in background to update cache (stale-while-revalidate)
+        // Fetch in background to update cache (stale-while-revalidate) with clone
         fetch(request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, networkResponse);
+              cache.put(request, copy);
             });
           }
-        }).catch(() => {/* offline, perfectly fine */});
+        }).catch(() => {/* offline fallback */});
         return cachedResponse;
       }
 
       return fetch(request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+        if (!networkResponse || networkResponse.status !== 200) {
           return networkResponse;
         }
-        const responseToCache = networkResponse.clone();
+        const copy = networkResponse.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseToCache);
+          cache.put(request, copy);
         });
         return networkResponse;
       }).catch(() => {
-        // If offline and request is an HTML page, fallback to root index.html
         if (request.headers.get('accept')?.includes('text/html')) {
           return caches.match('./index.html');
         }
