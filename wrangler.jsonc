@@ -11,6 +11,12 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page"
   },
+  "routes": [
+    {
+      "pattern": "game.yuewang.eu.cc",
+      "custom_domain": true
+    }
+  ],
   "observability": {
     "enabled": true
   }
