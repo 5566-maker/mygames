@@ -194,7 +194,7 @@
 
       // Big Back Button (>= 44px touch area)
       const homeBtn = document.createElement('a');
-      homeBtn.href = '../../index.html';
+      homeBtn.href = '/';
       homeBtn.className = 'arcade-btn arcade-btn-home';
       homeBtn.innerHTML = '<span>🏠</span><span>返回大厅</span>';
       homeBtn.setAttribute('aria-label', '返回游戏大厅');
@@ -254,7 +254,7 @@
             <button class="arcade-action-btn primary" id="arcade-btn-continue">
               <span>▶️</span><span>继续玩</span>
             </button>
-            <a href="../../index.html" class="arcade-action-btn secondary" id="arcade-btn-leave">
+            <a href="/" class="arcade-action-btn secondary" id="arcade-btn-leave">
               <span>🏠</span><span>回大厅</span>
             </a>
           </div>

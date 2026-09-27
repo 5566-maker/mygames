@@ -1,26 +1,26 @@
-const CACHE_NAME = 'kids-arcade-v1.0.1';
+const CACHE_NAME = 'kids-arcade-v1.0.2';
 
 const PRECACHE_URLS = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './icons/favicon.svg',
-  './icons/icon-192.svg',
-  './icons/icon-512.svg',
-  './shared/game-shell.css',
-  './shared/game-shell.js',
-  './games/tower-defense/index.html',
-  './games/rogue-defense/index.html',
-  './games/drive-mad/index.html',
-  './games/pixel-racer/index.html',
-  './games/f1-racer/index.html',
-  './games/spaceship/index.html',
-  './games/meteor/index.html',
-  './games/brick-breaker/index.html',
-  './games/sky-hopper/index.html',
-  './games/snake/index.html',
-  './games/memory/index.html',
-  './games/whack-mole/index.html'
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/icons/favicon.svg',
+  '/icons/icon-192.svg',
+  '/icons/icon-512.svg',
+  '/shared/game-shell.css',
+  '/shared/game-shell.js',
+  '/games/tower-defense/',
+  '/games/rogue-defense/',
+  '/games/drive-mad/',
+  '/games/pixel-racer/',
+  '/games/f1-racer/',
+  '/games/spaceship/',
+  '/games/meteor/',
+  '/games/brick-breaker/',
+  '/games/sky-hopper/',
+  '/games/snake/',
+  '/games/memory/',
+  '/games/whack-mole/'
 ];
 
 self.addEventListener('install', (event) => {
@@ -52,34 +52,64 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET requests with http/https scheme
   if (request.method !== 'GET' || !request.url.startsWith('http')) return;
 
+  const url = new URL(request.url);
+
+  // 1. Navigation requests (HTML documents)
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          // If network succeeds and is not redirected, update cache
+          if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, copy).catch(() => {});
+            }).catch(() => {});
+          }
+          return networkResponse;
+        })
+        .catch(async () => {
+          // Offline fallback
+          const cached = await caches.match(request);
+          if (cached) return cached;
+
+          // Try directory or index fallback
+          const path = url.pathname;
+          const altPath = path.endsWith('/') ? path + 'index.html' : path + '/';
+          const altCached = await caches.match(altPath);
+          if (altCached) return altCached;
+
+          return (await caches.match('/')) || (await caches.match('/index.html'));
+        })
+    );
+    return;
+  }
+
+  // 2. Static sub-resources (CSS, JS, SVG, media)
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch in background to update cache (stale-while-revalidate) with clone
+        // Fetch in background to update cache (stale-while-revalidate)
         fetch(request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
+          if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
             const copy = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, copy);
-            });
+              cache.put(request, copy).catch(() => {});
+            }).catch(() => {});
           }
-        }).catch(() => {/* offline fallback */});
+        }).catch(() => {});
         return cachedResponse;
       }
 
       return fetch(request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200) {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.redirected) {
           return networkResponse;
         }
         const copy = networkResponse.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, copy);
-        });
+          cache.put(request, copy).catch(() => {});
+        }).catch(() => {});
         return networkResponse;
-      }).catch(() => {
-        if (request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('./index.html');
-        }
       });
     })
   );

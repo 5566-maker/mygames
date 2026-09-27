@@ -26,6 +26,11 @@ export default {
 };
 
 function applySecurityHeaders(response: Response): Response {
+  // If redirect (3xx) or null-body status (101, 204, 205, 304), return directly
+  if ([101, 204, 205, 304].includes(response.status) || (response.status >= 300 && response.status < 400)) {
+    return response;
+  }
+
   const newHeaders = new Headers(response.headers);
   // Child privacy & safety headers
   newHeaders.set("X-Content-Type-Options", "nosniff");
