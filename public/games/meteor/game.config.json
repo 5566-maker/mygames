@@ -1,0 +1,10 @@
+{
+  "id": "meteor",
+  "title": "Meteor Dodge",
+  "category": "Classic & Retro",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

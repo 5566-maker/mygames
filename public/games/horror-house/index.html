@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bridge Horror House</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#000;width:100%;height:100%;overflow:hidden}body{color:#b6aa96;-webkit-user-select:none;user-select:none;font-family:Georgia,Times New Roman,serif}canvas#game{display:block;position:fixed;inset:0}.overlay{z-index:10;position:fixed;inset:0}.hidden{display:none!important}#vignette{pointer-events:none;z-index:5;background:radial-gradient(#0000 42%,#0000008c 78%,#000000eb 100%);transition:background .6s}#vignette.danger{background:radial-gradient(#0000 30%,#2800008c 65%,#140000f2 100%);animation:.9s infinite pulse}@keyframes pulse{50%{opacity:.75}}#grain{pointer-events:none;z-index:6;opacity:.07}#flash{pointer-events:none;z-index:7;opacity:0;background:#fff;transition:opacity .12s}#title-screen{z-index:20;cursor:pointer;text-align:center;background:radial-gradient(at 50% 30%,#100a0a 0%,#000 75%);flex-direction:column;justify-content:center;align-items:center;display:flex}#title-screen h1{letter-spacing:.18em;color:#6d0f0f;text-transform:uppercase;text-shadow:0 0 24px #8c0a0a8c,0 0 80px #5a000066;font-size:clamp(2.6rem,8vw,6rem);font-weight:400;animation:6s infinite titleFlicker}@keyframes titleFlicker{0%,to{opacity:1}92%{opacity:1}93%{opacity:.35}94%{opacity:1}96%{opacity:.5}97%{opacity:1}}#title-screen .sub{letter-spacing:.4em;color:#5d5142;text-transform:uppercase;margin-top:14px;font-size:1.05rem}#title-screen .begin{color:#9b8e78;letter-spacing:.2em;margin-top:64px;font-size:1.2rem;animation:2.6s infinite breathe}@keyframes breathe{50%{opacity:.25}}#title-screen .controls{color:#4a4138;letter-spacing:.08em;margin-top:40px;font-size:.85rem;line-height:1.9}#title-screen .warn{color:#3a332c;letter-spacing:.15em;font-size:.75rem;position:absolute;bottom:26px}#hud{pointer-events:none;z-index:12}#objective{letter-spacing:.25em;text-transform:uppercase;color:#8e8270;text-shadow:0 0 8px #000;text-align:center;font-size:.95rem;position:absolute;top:28px;left:50%;transform:translate(-50%)}#keys{letter-spacing:.5em;color:#7a6a3f;text-shadow:0 0 8px #000;font-size:1rem;position:absolute;top:60px;left:50%;transform:translate(-50%)}#prompt{color:#cfc3ab;letter-spacing:.12em;text-shadow:0 0 10px #000;font-size:1.05rem;position:absolute;bottom:18%;left:50%;transform:translate(-50%)}#prompt kbd{border:1px solid #6b5f4d;border-radius:3px;margin-right:8px;padding:1px 8px;font-family:inherit}#toast{color:#a89a82;letter-spacing:.15em;text-shadow:0 0 10px #000;opacity:0;text-align:center;font-size:.95rem;transition:opacity .5s;position:absolute;bottom:12%;left:50%;transform:translate(-50%)}#crosshair{background:#beb4a073;border-radius:50%;width:4px;height:4px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}#burn{background:#00000080;border:1px solid #dce6ff66;border-radius:3px;width:90px;height:5px;position:absolute;top:calc(50% - 26px);left:50%;overflow:hidden;transform:translate(-50%)}#burn-fill{background:linear-gradient(90deg,#8ea8d8,#e8f0ff);width:0%;height:100%;transition:width 50ms linear;box-shadow:0 0 10px #c8dcffcc}#battery{letter-spacing:.25em;color:#6e6354;text-shadow:0 0 8px #000;align-items:center;gap:10px;font-size:.75rem;display:flex;position:absolute;bottom:30px;left:34px}#battery.dying{color:#7e1212;animation:.8s infinite pulse}#battery .shell{background:#0009;border:1px solid #4a4138;border-radius:2px;width:110px;height:10px;position:relative;overflow:hidden}#battery .shell:after{content:"";background:#4a4138;width:3px;height:4px;position:absolute;top:2px;right:-5px}#battery-fill{background:#5d7a4f;width:100%;height:100%;transition:width .3s,background .5s}#note-overlay{z-index:18;background:#000000c7;justify-content:center;align-items:center;display:flex}#note-paper{color:#2a2118;background-color:#d8cdb4;background-image:radial-gradient(at 30% 20%,#78643c40,#0000 60%),radial-gradient(at 80% 90%,#503c1e4d,#0000 55%);background-position:0 0;background-repeat:repeat;background-size:auto;background-attachment:scroll;background-origin:padding-box;background-clip:border-box;width:min(520px,86vw);padding:48px 44px;font-size:1.15rem;font-style:italic;line-height:1.9;transform:rotate(-1.2deg);box-shadow:0 0 80px #000000e6}#note-paper .close-hint{color:#6b5c45;letter-spacing:.2em;text-align:center;margin-top:28px;font-size:.8rem;font-style:normal}#scare-face{z-index:30;background:#000;justify-content:center;align-items:center;display:flex}#scare-face img{image-rendering:auto;width:70vmin;height:70vmin;animation:.5s cubic-bezier(.1,1.4,.4,1) forwards lunge,80ms infinite jitter}@keyframes lunge{0%{opacity:.4;transform:scale(.25)}to{opacity:1;transform:scale(1.6)}}@keyframes jitter{0%{translate:0}25%{translate:-6px 4px}50%{translate:5px -5px}75%{translate:-4px -3px}to{translate:4px 5px}}.end-screen{z-index:25;text-align:center;flex-direction:column;justify-content:center;align-items:center;display:flex}#death-screen{background:radial-gradient(#1a0000 0%,#000 80%)}#death-screen h1{color:#7e1212;letter-spacing:.25em;text-transform:uppercase;text-shadow:0 0 30px #96000099;font-size:clamp(2.4rem,7vw,5rem)}#win-screen{background:radial-gradient(at 50% 100%,#131c10 0%,#000 80%)}#win-screen h1{color:#93a06b;letter-spacing:.25em;text-transform:uppercase;text-shadow:0 0 30px #788c4666;font-size:clamp(2.4rem,7vw,5rem)}.end-screen p{color:#6e6354;letter-spacing:.15em;margin-top:22px;font-size:1.05rem;line-height:1.9}.end-screen button{color:#9b8e78;letter-spacing:.3em;text-transform:uppercase;cursor:pointer;background:0 0;border:1px solid #4a4138;margin-top:48px;padding:14px 42px;font-family:inherit;font-size:1rem;transition:all .3s}.end-screen button:hover{color:#d6c9b0;background:#ffffff08;border-color:#8a7d68}#pause-screen{z-index:15;cursor:pointer;background:#000000b8;justify-content:center;align-items:center;display:flex}#pause-screen div{letter-spacing:.3em;color:#8e8270;text-transform:uppercase;font-size:1.1rem}body.shake canvas#game{animation:.4s shake}@keyframes shake{0%,to{transform:translate(0)}20%{transform:translate(-12px,8px)}40%{transform:translate(10px,-9px)}60%{transform:translate(-8px,-6px)}80%{transform:translate(9px,7px)}}</style>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <script type="module" crossorigin src="./assets/index-BcH3F_tY.js"></script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="vignette" class="overlay"></div>
+  <div id="grain" class="overlay"></div>
+  <div id="flash" class="overlay"></div>
+
+  <div id="hud" class="overlay hidden">
+    <div id="objective">Find a way out</div>
+    <div id="keys"></div>
+    <div id="crosshair"></div>
+    <div id="burn" class="hidden"><div id="burn-fill"></div></div>
+    <div id="prompt" class="hidden"></div>
+    <div id="toast"></div>
+    <div id="battery"><span>TORCH</span><div class="shell"><div id="battery-fill"></div></div></div>
+  </div>
+
+  <div id="note-overlay" class="overlay hidden">
+    <div id="note-paper">
+      <div id="note-text"></div>
+      <div class="close-hint">PRESS E TO PUT DOWN</div>
+    </div>
+  </div>
+
+  <div id="scare-face" class="overlay hidden"><img alt="" /></div>
+
+  <div id="death-screen" class="overlay end-screen hidden">
+    <h1>It Found You</h1>
+    <p>The house keeps what it catches.<br/>
+    Remember: the light burns him. Hold the beam on him — and watch your batteries.</p>
+    <button id="retry-btn">Try Again</button>
+  </div>
+
+  <div id="win-screen" class="overlay end-screen hidden">
+    <h1>You Escaped</h1>
+    <p id="win-stats"></p>
+    <button id="again-btn">Enter Again</button>
+  </div>
+
+  <div id="pause-screen" class="overlay hidden">
+    <div>— Paused — Click to return to the dark —</div>
+  </div>
+
+  <div id="title-screen" class="overlay">
+    <h1>Bridge<br/>Horror House</h1>
+    <div class="sub">No one has left since 1924</div>
+    <div class="begin">[ Click to Enter ]</div>
+    <div class="controls">
+      WASD — move&nbsp;&nbsp;·&nbsp;&nbsp;MOUSE — look&nbsp;&nbsp;·&nbsp;&nbsp;SHIFT — run<br/>
+      E — interact&nbsp;&nbsp;·&nbsp;&nbsp;F — flashlight<br/><br/>
+      Find the three brass keys. Unlock the front door. Get out.<br/>
+      If he comes for you — <em>hold your beam on him until he burns.</em><br/>
+      The light eats batteries. Spares are scattered through the house.
+    </div>
+    <div class="warn">HEADPHONES RECOMMENDED · CONTAINS SUDDEN LOUD SOUNDS AND FLASHING IMAGES</div>
+  </div>
+
+  <script src="../../shared/game-shell.js"></script>
+</body>
+</html>

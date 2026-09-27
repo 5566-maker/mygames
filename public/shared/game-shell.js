@@ -1,60 +1,21 @@
 /**
- * Kids Arcade (小小游戏厅) - Unified Game Shell Script
- * Zero-dependency Web Audio Sound Engine & Child-Friendly UI Controls
+ * Unified Modern Game Shell Script - Self-hosted Web Game Arcade
+ * Handles: Back Navigation, Auto-hiding Toolbar, Fullscreen, Audio Synchronization,
+ * Orientation Guard, Gamepad Detection, and Legacy Compatibility.
  */
-
 (function () {
   'use strict';
 
-  // Prevent double tap zoom and gesture interference
-  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
-  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
-  document.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false });
-
-  // Web Audio Synthesizer
-  class SoundEngine {
+  // Universal Audio State Manager
+  class SoundManager {
     constructor() {
+      this.enabled = localStorage.getItem('arcade_sound_enabled') !== 'false';
       this.ctx = null;
-      this.enabled = localStorage.getItem('kids_arcade_sound') !== 'false';
-      this.isUnlocked = false;
-
-      // Unlock Web Audio on first user interaction
-      const unlockAudio = () => {
-        if (!this.ctx) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (AudioContext) {
-            this.ctx = new AudioContext();
-          }
-        }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-        this.isUnlocked = true;
-        ['touchstart', 'touchend', 'mousedown', 'pointerdown', 'keydown'].forEach((ev) => {
-          document.removeEventListener(ev, unlockAudio);
-        });
-      };
-
-      ['touchstart', 'touchend', 'mousedown', 'pointerdown', 'keydown'].forEach((ev) => {
-        document.addEventListener(ev, unlockAudio, { passive: true });
-      });
+      this._initListener();
     }
 
-    setEnabled(val) {
-      this.enabled = !!val;
-      localStorage.setItem('kids_arcade_sound', this.enabled ? 'true' : 'false');
-      window.dispatchEvent(new CustomEvent('arcade-sound-change', { detail: { enabled: this.enabled } }));
-    }
-
-    toggle() {
-      this.setEnabled(!this.enabled);
-      if (this.enabled) this.playTap();
-      return this.enabled;
-    }
-
-    _playTone(freqStart, freqEnd, type, duration, volStart = 0.25, volEnd = 0.001) {
-      if (!this.enabled) return;
-      try {
+    _initListener() {
+      const unlock = () => {
         if (!this.ctx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
           if (AudioContext) this.ctx = new AudioContext();
@@ -62,304 +23,327 @@
         if (this.ctx && this.ctx.state === 'suspended') {
           this.ctx.resume();
         }
-        if (!this.ctx) return;
+        ['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
+          document.removeEventListener(ev, unlock);
+        });
+      };
+      ['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
+        document.addEventListener(ev, unlock, { passive: true });
+      });
+    }
 
+    toggle() {
+      this.enabled = !this.enabled;
+      localStorage.setItem('arcade_sound_enabled', this.enabled ? 'true' : 'false');
+      localStorage.setItem('kids_arcade_sound', this.enabled ? 'true' : 'false');
+      window.dispatchEvent(new CustomEvent('arcade-sound-change', { detail: { enabled: this.enabled } }));
+      if (this.enabled) this.playTap();
+      return this.enabled;
+    }
+
+    playTone(fStart, fEnd, type, dur, vStart = 0.15, vEnd = 0.001) {
+      if (!this.enabled) return;
+      try {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (!this.ctx || this.ctx.state === 'suspended') return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        const now = this.ctx.currentTime;
-
-        osc.type = type || 'sine';
-        osc.frequency.setValueAtTime(freqStart, now);
-        if (freqEnd && freqEnd !== freqStart) {
-          osc.frequency.exponentialRampToValueAtTime(Math.max(10, freqEnd), now + duration);
+        osc.type = type;
+        osc.frequency.setValueAtTime(fStart, this.ctx.currentTime);
+        if (fEnd !== fStart) {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(10, fEnd), this.ctx.currentTime + dur);
         }
-
-        gain.gain.setValueAtTime(volStart, now);
-        gain.gain.exponentialRampToValueAtTime(volEnd, now + duration);
-
+        gain.gain.setValueAtTime(vStart, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(vEnd, this.ctx.currentTime + dur);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + duration);
-      } catch (err) {
-        // Audio error silently caught
-      }
+        osc.start();
+        osc.stop(this.ctx.currentTime + dur);
+      } catch (e) {}
     }
 
-    playTap() {
-      this._playTone(480, 720, 'sine', 0.08, 0.2);
-    }
-
-    playJump() {
-      this._playTone(220, 580, 'sine', 0.16, 0.25);
-    }
-
-    playCoin() {
-      this._playTone(659, 659, 'triangle', 0.08, 0.25);
-      setTimeout(() => {
-        this._playTone(987, 987, 'triangle', 0.15, 0.25);
-      }, 70);
-    }
-
-    playHit() {
-      this._playTone(180, 60, 'sawtooth', 0.14, 0.3);
-    }
-
-    playLaser() {
-      this._playTone(880, 140, 'sawtooth', 0.12, 0.2);
-    }
-
-    playBonk() {
-      this._playTone(320, 140, 'triangle', 0.12, 0.35);
-    }
-
-    playPowerup() {
-      const notes = [440, 554, 659, 880];
-      notes.forEach((freq, idx) => {
-        setTimeout(() => this._playTone(freq, freq, 'sine', 0.1, 0.2), idx * 60);
-      });
-    }
-
+    playTap() { this.playTone(600, 400, 'sine', 0.08, 0.12); }
     playWin() {
-      const chord = [523.25, 659.25, 783.99, 1046.50]; // C E G C
-      chord.forEach((freq, idx) => {
-        setTimeout(() => this._playTone(freq, freq, 'triangle', 0.3, 0.25), idx * 80);
-      });
+      this.playTone(300, 600, 'triangle', 0.15);
+      setTimeout(() => this.playTone(600, 1000, 'triangle', 0.25), 120);
     }
-
-    playLose() {
-      const notes = [440, 415, 392, 349];
-      notes.forEach((freq, idx) => {
-        setTimeout(() => this._playTone(freq, freq * 0.95, 'sine', 0.18, 0.2), idx * 100);
-      });
-    }
+    playHit() { this.playTone(180, 60, 'sawtooth', 0.15, 0.2); }
+    playCoin() { this.playTone(987.77, 1318.51, 'sine', 0.12, 0.15); }
+    playPowerup() { this.playTone(400, 880, 'triangle', 0.25, 0.18); }
   }
 
-  const KidAudio = new SoundEngine();
-  window.KidAudio = KidAudio;
+  const Sound = new SoundManager();
+  window.ArcadeSound = Sound;
+  // Legacy aliases
+  window.KidAudio = Sound;
 
-  // Storage Helper
-  const KidStorage = {
-    getScore(gameKey) {
-      return parseInt(localStorage.getItem(`arcade_score_${gameKey}`) || '0', 10);
-    },
-    saveScore(gameKey, score) {
-      const best = this.getScore(gameKey);
-      if (score > best) {
-        localStorage.setItem(`arcade_score_${gameKey}`, score.toString());
-        return true; // New record
-      }
-      return false;
-    },
-    getStars(gameKey) {
-      return parseInt(localStorage.getItem(`arcade_stars_${gameKey}`) || '0', 10);
-    },
-    addStars(gameKey, count) {
-      const total = this.getStars(gameKey) + count;
-      localStorage.setItem(`arcade_stars_${gameKey}`, total.toString());
-      return total;
-    }
-  };
-  window.KidStorage = KidStorage;
-
-  // Shell Controller
-  class ArcadeShell {
+  // Modern Unified Shell Class
+  class GameShell {
     constructor() {
-      this.gameKey = window.KID_GAME_ID || 'game';
-      this.onPauseCallbacks = [];
-      this.onResumeCallbacks = [];
+      this.hideTimer = null;
+      this.isBarHidden = false;
+      this.gameTitle = document.title || 'Game';
+      this.config = null;
       this.isPaused = false;
 
-      this.initDom();
+      this.init();
     }
 
-    initDom() {
-      document.addEventListener('DOMContentLoaded', () => {
-        this.renderTopBar();
-        this.renderModals();
-      });
-      if (document.readyState === 'interactive' || document.readyState === 'complete') {
-        this.renderTopBar();
-        this.renderModals();
-      }
+    async init() {
+      // Try to load game.config.json from current directory
+      try {
+        const res = await fetch('game.config.json');
+        if (res.ok) {
+          this.config = await res.json();
+          if (this.config.title) this.gameTitle = this.config.title;
+        }
+      } catch (e) {}
+
+      this.render();
+      this.setupAutoFade();
+      this.setupFullscreen();
+      this.setupOrientationGuard();
+      this.setupGamepadListener();
+      this.setupKeyboardShortcuts();
     }
 
-    renderTopBar() {
+    render() {
       if (document.getElementById('arcade-shell-bar')) return;
 
-      const bar = document.createElement('div');
+      // Top Sensor zone
+      const sensor = document.createElement('div');
+      sensor.className = 'arcade-shell-sensor';
+      document.body.appendChild(sensor);
+
+      // Top Bar
+      const bar = document.createElement('header');
       bar.id = 'arcade-shell-bar';
       bar.className = 'arcade-shell-bar';
 
-      // Big Back Button (>= 44px touch area)
-      const homeBtn = document.createElement('a');
-      homeBtn.href = '/';
-      homeBtn.className = 'arcade-btn arcade-btn-home';
-      homeBtn.innerHTML = '<span>🏠</span><span>返回大厅</span>';
-      homeBtn.setAttribute('aria-label', '返回游戏大厅');
-      homeBtn.onclick = (e) => {
-        KidAudio.playTap();
-      };
+      // Left controls: Back
+      const left = document.createElement('div');
+      left.className = 'arcade-shell-left';
 
-      // Right controls container
-      const rightControls = document.createElement('div');
-      rightControls.className = 'arcade-right-controls';
-
-      // Pause button
-      const pauseBtn = document.createElement('button');
-      pauseBtn.className = 'arcade-btn arcade-btn-pause';
-      pauseBtn.innerHTML = '<span>⏸️</span>';
-      pauseBtn.setAttribute('aria-label', '暂停游戏');
-      pauseBtn.onclick = () => {
-        KidAudio.playTap();
-        this.togglePause();
-      };
-
-      // Sound button
-      const soundBtn = document.createElement('button');
-      soundBtn.id = 'arcade-sound-btn';
-      soundBtn.className = 'arcade-btn arcade-btn-sound';
-      soundBtn.innerHTML = KidAudio.enabled ? '🔊' : '🔇';
-      soundBtn.setAttribute('aria-label', '开关声音');
-      soundBtn.onclick = () => {
-        const enabled = KidAudio.toggle();
-        soundBtn.innerHTML = enabled ? '🔊' : '🔇';
-      };
-
-      window.addEventListener('arcade-sound-change', (e) => {
-        soundBtn.innerHTML = e.detail.enabled ? '🔊' : '🔇';
-      });
-
-      rightControls.appendChild(pauseBtn);
-      rightControls.appendChild(soundBtn);
-
-      bar.appendChild(homeBtn);
-      bar.appendChild(rightControls);
-      document.body.appendChild(bar);
-    }
-
-    renderModals() {
-      if (document.getElementById('arcade-modal')) return;
-
-      const modal = document.createElement('div');
-      modal.id = 'arcade-modal';
-      modal.className = 'arcade-modal';
-      modal.innerHTML = `
-        <div class="arcade-dialog" id="arcade-dialog">
-          <div class="arcade-dialog-stars" id="arcade-stars">⭐⭐⭐</div>
-          <h2 class="arcade-dialog-title" id="arcade-modal-title">太棒了！</h2>
-          <p class="arcade-dialog-desc" id="arcade-modal-desc">得分：100</p>
-          <div class="arcade-dialog-actions" id="arcade-modal-actions">
-            <button class="arcade-action-btn primary" id="arcade-btn-continue">
-              <span>▶️</span><span>继续玩</span>
-            </button>
-            <a href="/" class="arcade-action-btn secondary" id="arcade-btn-leave">
-              <span>🏠</span><span>回大厅</span>
-            </a>
-          </div>
-        </div>
+      const backBtn = document.createElement('a');
+      backBtn.href = '/';
+      backBtn.className = 'arcade-shell-btn back-btn';
+      backBtn.setAttribute('aria-label', '返回大厅 (Return to Arcade)');
+      backBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        <span>返回大厅</span>
       `;
-      document.body.appendChild(modal);
+      backBtn.onclick = () => Sound.playTap();
 
-      document.getElementById('arcade-btn-leave')?.addEventListener('click', () => {
-        KidAudio.playTap();
+      left.appendChild(backBtn);
+
+      // Center title & badge
+      const center = document.createElement('div');
+      center.className = 'arcade-shell-title';
+      center.innerHTML = `
+        <span>${this.gameTitle}</span>
+        ${this.config?.category ? `<span class="arcade-shell-badge">${this.config.category}</span>` : ''}
+      `;
+
+      // Right controls: Sound & Fullscreen
+      const right = document.createElement('div');
+      right.className = 'arcade-shell-right';
+
+      const soundBtn = document.createElement('button');
+      soundBtn.id = 'shell-sound-btn';
+      soundBtn.className = 'arcade-shell-btn arcade-icon-btn';
+      soundBtn.setAttribute('aria-label', '声音开关 (Mute / Unmute)');
+      soundBtn.innerHTML = Sound.enabled ? '🔊' : '🔇';
+      soundBtn.onclick = () => {
+        const en = Sound.toggle();
+        soundBtn.innerHTML = en ? '🔊' : '🔇';
+        this.showToast(en ? '声音已开启' : '已静音');
+      };
+
+      const fsBtn = document.createElement('button');
+      fsBtn.id = 'shell-fs-btn';
+      fsBtn.className = 'arcade-shell-btn arcade-icon-btn';
+      fsBtn.setAttribute('aria-label', '全屏模式 (Fullscreen)');
+      fsBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>
+      `;
+      fsBtn.onclick = () => this.toggleFullscreen();
+
+      right.appendChild(soundBtn);
+      right.appendChild(fsBtn);
+
+      bar.appendChild(left);
+      bar.appendChild(center);
+      bar.appendChild(right);
+      document.body.appendChild(bar);
+
+      // Toast container
+      const toast = document.createElement('div');
+      toast.id = 'arcade-shell-toast';
+      toast.className = 'arcade-shell-toast';
+      document.body.appendChild(toast);
+    }
+
+    showToast(message, duration = 2000) {
+      const toast = document.getElementById('arcade-shell-toast');
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    setupAutoFade() {
+      const bar = document.getElementById('arcade-shell-bar');
+      const resetFade = () => {
+        if (!bar) return;
+        bar.classList.remove('shell-hidden');
+        clearTimeout(this.hideTimer);
+        this.hideTimer = setTimeout(() => {
+          // Do not hide if hover or modal open
+          bar.classList.add('shell-hidden');
+        }, 2800);
+      };
+
+      ['mousemove', 'pointerdown', 'touchstart', 'keydown'].forEach(ev => {
+        window.addEventListener(ev, resetFade, { passive: true });
+      });
+
+      // Mouseenter sensor reveals bar instantly
+      document.querySelector('.arcade-shell-sensor')?.addEventListener('mouseenter', () => {
+        if (bar) bar.classList.remove('shell-hidden');
+      });
+
+      resetFade();
+    }
+
+    setupFullscreen() {
+      document.addEventListener('fullscreenchange', () => {
+        const isFs = !!document.fullscreenElement;
+        const btn = document.getElementById('shell-fs-btn');
+        if (btn) {
+          btn.style.color = isFs ? '#38BDF8' : '#F1F5F9';
+        }
       });
     }
 
-    togglePause() {
-      if (this.isPaused) {
-        this.resume();
+    toggleFullscreen() {
+      Sound.playTap();
+      if (!document.fullscreenElement) {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) elem.requestFullscreen().catch(() => {});
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
       } else {
-        this.pause();
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
       }
     }
 
-    pause() {
-      this.isPaused = true;
-      this.onPauseCallbacks.forEach(fn => fn());
-      this.showCustomModal({
-        stars: '⏸️',
-        title: '游戏暂停啦',
-        desc: '休息一下眼睛，准备好了就继续吧！',
-        btnText: '▶️ 继续游戏',
-        onBtnClick: () => this.resume()
-      });
-    }
+    setupOrientationGuard() {
+      if (this.config?.orientation === 'landscape') {
+        const warning = document.createElement('div');
+        warning.className = 'arcade-orientation-warning';
+        warning.innerHTML = `
+          <div class="orientation-icon">📱</div>
+          <div class="orientation-title">建议横屏游玩</div>
+          <div class="orientation-desc">为了获得最佳画质与视界，请旋转您的手机或平板到横屏。</div>
+          <button class="orientation-dismiss">继续竖屏进入</button>
+        `;
+        document.body.appendChild(warning);
 
-    resume() {
-      this.isPaused = false;
-      this.hideModal();
-      this.onResumeCallbacks.forEach(fn => fn());
-    }
-
-    showWin({ score, stars = 3, message = '太棒啦！闯关成功！', onRestart }) {
-      KidAudio.playWin();
-      KidStorage.saveScore(this.gameKey, score);
-      KidStorage.addStars(this.gameKey, stars);
-
-      const starStr = '⭐'.repeat(Math.max(1, Math.min(3, stars)));
-      this.showCustomModal({
-        stars: starStr,
-        title: '🎉 太棒了！',
-        desc: `${message}<br><strong style="font-size:24px;color:#FF6B6B">得分: ${score}</strong>`,
-        btnText: '🔄 再玩一次',
-        onBtnClick: () => {
-          this.hideModal();
-          if (onRestart) onRestart();
-        }
-      });
-    }
-
-    showGameOver({ score, message = '加油！差一点点就通关了！', onRestart }) {
-      KidAudio.playLose();
-      KidStorage.saveScore(this.gameKey, score);
-
-      this.showCustomModal({
-        stars: '🌈',
-        title: '再试一次吧！',
-        desc: `${message}<br><strong style="font-size:22px;color:#FF9F43">本次得分: ${score}</strong>`,
-        btnText: '🔄 重新开始',
-        onBtnClick: () => {
-          this.hideModal();
-          if (onRestart) onRestart();
-        }
-      });
-    }
-
-    showCustomModal({ stars, title, desc, btnText, onBtnClick }) {
-      const modal = document.getElementById('arcade-modal');
-      if (!modal) return;
-
-      document.getElementById('arcade-stars').innerHTML = stars || '⭐';
-      document.getElementById('arcade-modal-title').textContent = title || '';
-      document.getElementById('arcade-modal-desc').innerHTML = desc || '';
-
-      const continueBtn = document.getElementById('arcade-btn-continue');
-      if (continueBtn) {
-        continueBtn.innerHTML = `<span>${btnText}</span>`;
-        continueBtn.onclick = () => {
-          KidAudio.playTap();
-          if (onBtnClick) onBtnClick();
+        warning.querySelector('.orientation-dismiss').onclick = () => {
+          warning.classList.remove('active');
         };
+
+        const checkOrientation = () => {
+          const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          const isPortrait = window.innerHeight > window.innerWidth;
+          if (isMobile && isPortrait) {
+            warning.classList.add('active');
+          } else {
+            warning.classList.remove('active');
+          }
+        };
+
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        setTimeout(checkOrientation, 500);
       }
-
-      modal.classList.add('active');
     }
 
-    hideModal() {
-      const modal = document.getElementById('arcade-modal');
-      if (modal) modal.classList.remove('active');
+    setupGamepadListener() {
+      window.addEventListener('gamepadconnected', (e) => {
+        const name = e.gamepad.id || '控制器';
+        this.showToast(`🎮 手柄已连接: ${name.slice(0, 24)}`, 3500);
+      });
+      window.addEventListener('gamepaddisconnected', () => {
+        this.showToast('🎮 手柄已断开连接', 2500);
+      });
     }
 
-    onPause(fn) {
-      if (typeof fn === 'function') this.onPauseCallbacks.push(fn);
+    setupKeyboardShortcuts() {
+      window.addEventListener('keydown', (e) => {
+        // Press F11 or 'F' key outside inputs for fullscreen
+        if (e.key === 'f' || e.key === 'F') {
+          if (!['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+            this.toggleFullscreen();
+          }
+        }
+        // Press 'M' for mute toggle
+        if (e.key === 'm' || e.key === 'M') {
+          if (!['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+            Sound.toggle();
+            const btn = document.getElementById('shell-sound-btn');
+            if (btn) btn.innerHTML = Sound.enabled ? '🔊' : '🔇';
+            this.showToast(Sound.enabled ? '声音已开启' : '已静音');
+          }
+        }
+      });
     }
 
-    onResume(fn) {
-      if (typeof fn === 'function') this.onResumeCallbacks.push(fn);
+    // Legacy method stubs for compatibility with classic games
+    showWin(opts = {}) {
+      Sound.playWin();
+      this.showToast(`🏆 恭喜通关！得分：${opts.score || 0}`, 4000);
+    }
+    showGameOver(opts = {}) {
+      Sound.playHit();
+      this.showToast(`💥 游戏结束！得分：${opts.score || 0}`, 4000);
+    }
+    togglePause() {
+      this.isPaused = !this.isPaused;
+      this.showToast(this.isPaused ? '⏸️ 游戏已暂停' : '▶️ 游戏继续');
     }
   }
 
-  window.KidShell = new ArcadeShell();
+  // Storage helper
+  window.KidStorage = {
+    getScore: (id) => parseInt(localStorage.getItem(`arcade_score_${id}`) || '0', 10),
+    saveScore: (id, score) => {
+      const cur = parseInt(localStorage.getItem(`arcade_score_${id}`) || '0', 10);
+      if (score > cur) localStorage.setItem(`arcade_score_${id}`, score.toString());
+    },
+    getStars: (id) => parseInt(localStorage.getItem(`arcade_stars_${id}`) || '0', 10),
+    saveStars: (id, stars) => {
+      const cur = parseInt(localStorage.getItem(`arcade_stars_${id}`) || '0', 10);
+      if (stars > cur) localStorage.setItem(`arcade_stars_${id}`, stars.toString());
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    window.ArcadeShell = new GameShell();
+    window.KidShell = window.ArcadeShell;
+  });
+
+  if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    window.ArcadeShell = new GameShell();
+    window.KidShell = window.ArcadeShell;
+  }
 })();

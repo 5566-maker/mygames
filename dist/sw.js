@@ -1,26 +1,15 @@
-const CACHE_NAME = 'kids-arcade-v1.0.2';
+const CACHE_NAME = 'arcade-v2.0.0';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
+  '/games.json',
   '/manifest.webmanifest',
   '/icons/favicon.svg',
   '/icons/icon-192.svg',
   '/icons/icon-512.svg',
   '/shared/game-shell.css',
-  '/shared/game-shell.js',
-  '/games/tower-defense/',
-  '/games/rogue-defense/',
-  '/games/drive-mad/',
-  '/games/pixel-racer/',
-  '/games/f1-racer/',
-  '/games/spaceship/',
-  '/games/meteor/',
-  '/games/brick-breaker/',
-  '/games/sky-hopper/',
-  '/games/snake/',
-  '/games/memory/',
-  '/games/whack-mole/'
+  '/shared/game-shell.js'
 ];
 
 self.addEventListener('install', (event) => {

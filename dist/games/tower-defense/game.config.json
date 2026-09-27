@@ -1,0 +1,10 @@
+{
+  "id": "tower-defense",
+  "title": "Toy Tower Defense",
+  "category": "Classic & Retro",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

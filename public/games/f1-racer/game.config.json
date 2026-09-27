@@ -1,0 +1,10 @@
+{
+  "id": "f1-racer",
+  "title": "Top-Down F1 Circuit",
+  "category": "Classic & Retro",
+  "orientation": "landscape",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

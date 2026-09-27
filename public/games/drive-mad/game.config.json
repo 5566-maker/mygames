@@ -1,0 +1,10 @@
+{
+  "id": "drive-mad",
+  "title": "Drive Mad 2D",
+  "category": "Classic & Retro",
+  "orientation": "landscape",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

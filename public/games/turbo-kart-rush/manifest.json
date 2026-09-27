@@ -1,0 +1,9 @@
+{
+  "name": "Turbo Kart Rush",
+  "short_name": "TurboKart",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0b1a",
+  "theme_color": "#0b0b1a"
+}

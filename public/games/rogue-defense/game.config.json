@@ -1,0 +1,10 @@
+{
+  "id": "rogue-defense",
+  "title": "Magic Castle Rogue",
+  "category": "Classic & Retro",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

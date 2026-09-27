@@ -1,0 +1,16 @@
+{
+  "id": "neon-runner",
+  "title": "Neon Velocity 3D",
+  "chineseTitle": "霓虹极速狂奔",
+  "category": "Action & Runner",
+  "orientation": "landscape",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "gamepad": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "OpenSource / Arcade",
+  "github": "https://github.com/5566-maker/mygames"
+}

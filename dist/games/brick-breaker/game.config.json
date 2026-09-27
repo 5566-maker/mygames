@@ -1,0 +1,10 @@
+{
+  "id": "brick-breaker",
+  "title": "Candy Brick Breaker",
+  "category": "Classic & Retro",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

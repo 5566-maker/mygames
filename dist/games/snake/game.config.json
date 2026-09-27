@@ -1,0 +1,10 @@
+{
+  "id": "snake",
+  "title": "Happy Snake",
+  "category": "Classic & Retro",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

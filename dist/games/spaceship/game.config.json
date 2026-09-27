@@ -1,0 +1,10 @@
+{
+  "id": "spaceship",
+  "title": "Spaceship Shooter",
+  "category": "Classic & Retro",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

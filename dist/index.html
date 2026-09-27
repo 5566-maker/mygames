@@ -2,114 +2,113 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>小小游戏厅 - Kids Arcade (4~6岁幼儿安全无广告小游戏)</title>
-  
-  <!-- PWA & Mobile Meta -->
-  <link rel="manifest" href="./manifest.webmanifest">
-  <meta name="theme-color" content="#FFD166">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <title>KIDS ARCADE · 高质量 Web 游戏大厅</title>
+  <meta name="description" content="高质量、自部署、零广告、统一体验的现代 Web Game Arcade。支持桌面与移动端触控，包含 3D 竞速、战术射击、恐怖逃生、动作格斗与物理沙盒。">
+  <meta name="theme-color" content="#080c18">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="小小游戏厅">
-  <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg">
-  <link rel="apple-touch-icon" href="./icons/icon-192.svg">
-
+  <link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
   <style>
     :root {
-      --safe-top: env(safe-area-inset-top, 16px);
-      --safe-bottom: env(safe-area-inset-bottom, 16px);
-      --safe-left: env(safe-area-inset-left, 16px);
-      --safe-right: env(safe-area-inset-right, 16px);
-      --c-yellow: #FFD166;
-      --c-red: #FF5252;
-      --c-blue: #4FACFE;
-      --c-green: #06D6A0;
-      --c-purple: #9B51E0;
+      --bg-dark: #080c18;
+      --bg-surface: #0f172a;
+      --bg-card: rgba(15, 23, 42, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(56, 189, 248, 0.3);
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --accent-cyan: #38BDF8;
+      --accent-blue: #0284C7;
+      --accent-amber: #F59E0B;
+      --accent-rose: #F43F5E;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    body {
-      background: linear-gradient(180deg, #192a56 0%, #0c2461 50%, #0a192f 100%);
-      color: #FFF;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       min-height: 100vh;
       overflow-x: hidden;
-      overflow-y: auto;
-      touch-action: manipulation;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Ambient background bubbles */
-    .bg-bubble {
+    /* Ambient Background Gradients */
+    body::before {
+      content: "";
       position: fixed;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
+      top: -20vh;
+      left: 10vw;
+      width: 50vw;
+      height: 50vw;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
       pointer-events: none;
       z-index: 0;
-      animation: floatBubble 8s infinite alternate ease-in-out;
     }
-    @keyframes floatBubble {
-      0% { transform: translateY(0) scale(1); }
-      100% { transform: translateY(-30px) scale(1.08); }
+    body::after {
+      content: "";
+      position: fixed;
+      bottom: -10vh;
+      right: 5vw;
+      width: 45vw;
+      height: 45vw;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
     }
 
-    /* Header Bar */
+    /* Top Navigation Bar */
     header {
       position: sticky;
       top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
+      z-index: 50;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(8, 12, 24, 0.85);
+      border-bottom: 1px solid var(--border-color);
+      padding: calc(14px + var(--safe-top)) 24px 14px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-top: calc(var(--safe-top) + 8px);
-      padding-bottom: 12px;
-      padding-left: calc(var(--safe-left) + 16px);
-      padding-right: calc(var(--safe-right) + 16px);
-      background: rgba(12, 36, 97, 0.88);
-      backdrop-filter: blur(12px);
-      border-bottom: 3px solid rgba(255, 209, 102, 0.3);
+      gap: 16px;
     }
 
-    .brand {
+    .brand-wrap {
       display: flex;
       align-items: center;
       gap: 12px;
+      text-decoration: none;
+      color: inherit;
     }
-
-    .brand-icon {
-      font-size: 34px;
-      animation: bounceStar 2s infinite ease-in-out;
-      filter: drop-shadow(0 4px 8px rgba(255, 209, 102, 0.5));
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
     }
-    @keyframes bounceStar {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-6px) rotate(8deg); }
-    }
-
-    .brand-title {
-      font-size: 26px;
-      font-weight: 900;
-      letter-spacing: 1px;
-      background: linear-gradient(135deg, #FFD166, #FF9F43);
+    .brand-text h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #FFF, #94A3B8);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 2px 10px rgba(255, 209, 102, 0.3);
     }
-
-    .brand-sub {
-      font-size: 11px;
-      font-weight: 800;
-      color: #A4B0BE;
-      letter-spacing: 2px;
+    .brand-text span {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
     }
 
     .header-actions {
@@ -117,679 +116,724 @@
       align-items: center;
       gap: 12px;
     }
-
-    .hdr-btn {
-      min-width: 44px;
-      min-height: 44px;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      background: rgba(255, 255, 255, 0.15);
+    .search-input {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
       color: #FFF;
-      font-size: 20px;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      outline: none;
+      width: 220px;
+      transition: all 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+      width: 280px;
+    }
+    .header-btn {
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-      transition: transform 0.15s, background-color 0.2s;
+      gap: 6px;
+      transition: all 0.2s;
     }
-    .hdr-btn:active {
-      transform: scale(0.9);
-      background: rgba(255, 255, 255, 0.3);
-    }
-
-    /* Parent Gate Gear Button */
-    .parent-btn {
-      position: relative;
-    }
-    .parent-progress-ring {
-      position: absolute;
-      top: -3px;
-      left: -3px;
-      width: 50px;
-      height: 50px;
-      pointer-events: none;
-      transform: rotate(-90deg);
-    }
-    .parent-progress-ring circle {
-      fill: none;
-      stroke: #FFD166;
-      stroke-width: 4;
-      stroke-dasharray: 125.6;
-      stroke-dashoffset: 125.6;
-      transition: stroke-dashoffset 0.05s linear;
+    .header-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     /* Main Container */
     main {
       position: relative;
-      z-index: 10;
-      max-width: 1300px;
+      z-index: 1;
+      max-width: 1400px;
       margin: 0 auto;
-      padding: 18px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 32px) calc(var(--safe-left) + 16px);
+      padding: 24px 24px calc(60px + var(--safe-bottom)) 24px;
     }
 
-    /* Arcade Grid Responsive:
-       iPhone: 2 cols
-       iPad: 3~4 cols
-       Desktop: 4~6 cols
-    */
-    .arcade-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-    }
-
-    @media (min-width: 600px) {
-      .arcade-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-      }
-    }
-
-    @media (min-width: 900px) {
-      .arcade-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 22px;
-      }
-    }
-
-    @media (min-width: 1200px) {
-      .arcade-grid {
-        grid-template-columns: repeat(6, 1fr);
-        gap: 22px;
-      }
-    }
-
-    /* Game Card */
-    .game-card {
+    /* Hero Featured Banner */
+    .hero-banner {
       position: relative;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 28px;
-      padding: 16px 12px 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-decoration: none;
-      color: #FFF;
-      border: 3px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-      cursor: pointer;
-      transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.14s, border-color 0.2s;
+      border-radius: 24px;
       overflow: hidden;
-    }
-
-    .game-card:active {
-      transform: scale(0.94);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    }
-
-    .game-card::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 45%;
-      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 100%);
-      border-radius: 26px 26px 0 0;
-      pointer-events: none;
-    }
-
-    /* Card Themes */
-    .theme-td       { background: linear-gradient(135deg, #1e3c72, #2a5298); border-color: #54a0ff; }
-    .theme-rogue    { background: linear-gradient(135deg, #4a148c, #7b1fa2); border-color: #d279ee; }
-    .theme-drive    { background: linear-gradient(135deg, #e65100, #ff9800); border-color: #ffd166; }
-    .theme-pixel    { background: linear-gradient(135deg, #b71540, #eb2f06); border-color: #ff6b81; }
-    .theme-f1       { background: linear-gradient(135deg, #0c2461, #1e3799); border-color: #4a69bd; }
-    .theme-space    { background: linear-gradient(135deg, #2c2c54, #474787); border-color: #706fd3; }
-    .theme-meteor   { background: linear-gradient(135deg, #222f3e, #576574); border-color: #ff9f43; }
-    .theme-brick    { background: linear-gradient(135deg, #006266, #1289A7); border-color: #12CBC4; }
-    .theme-sky      { background: linear-gradient(135deg, #009432, #A3CB38); border-color: #C4E538; }
-    .theme-snake    { background: linear-gradient(135deg, #009975, #10ac84); border-color: #1dd1a1; }
-    .theme-memory   { background: linear-gradient(135deg, #833471, #B53471); border-color: #FDA7DF; }
-    .theme-mole     { background: linear-gradient(135deg, #6F1E51, #833471); border-color: #ED4C67; }
-
-    .card-icon {
-      font-size: 60px;
-      margin-bottom: 10px;
-      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .game-card:active .card-icon {
-      transform: scale(1.15) rotate(-6deg);
-    }
-
-    .card-name {
-      font-size: 20px;
-      font-weight: 900;
-      color: #FFF;
-      text-align: center;
-      margin-bottom: 2px;
-      letter-spacing: 0.5px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-
-    .card-sub {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.85);
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-align: center;
-    }
-
-    .card-badge {
-      margin-top: 8px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.28);
-      font-size: 12px;
-      font-weight: 800;
-      color: #FFD166;
+      margin-bottom: 40px;
+      border: 1px solid var(--border-color);
+      background: #0d1424;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      min-height: 380px;
       display: flex;
-      align-items: center;
-      gap: 4px;
+      align-items: flex-end;
     }
-
-    /* Long-press toast */
-    #parent-toast {
-      position: fixed;
-      bottom: calc(var(--safe-bottom) + 24px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15, 20, 35, 0.95);
-      color: #FFD166;
-      padding: 10px 22px;
-      border-radius: 999px;
-      font-size: 14px;
-      font-weight: 800;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      border: 2px solid #FFD166;
-      display: none;
-      z-index: 1000;
-    }
-
-    /* Parent Gate Modal */
-    .parent-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
+    .hero-img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
-      background: rgba(10, 15, 30, 0.85);
-      backdrop-filter: blur(10px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-      padding: 20px;
+      object-fit: cover;
+      object-position: center 30%;
+      filter: brightness(0.85);
+      transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    .parent-modal.active {
+    .hero-banner:hover .hero-img {
+      transform: scale(1.02);
+    }
+    .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(8, 12, 24, 0.1) 0%, rgba(8, 12, 24, 0.7) 50%, rgba(8, 12, 24, 0.98) 100%);
+    }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      padding: 40px;
+      max-width: 680px;
+    }
+    .hero-tags {
       display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
     }
-
-    .parent-dialog {
-      background: #1E272E;
+    .badge {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.18);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .badge.gold {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .hero-title {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 12px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    }
+    .hero-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 30px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
       color: #FFF;
-      border-radius: 28px;
-      border: 4px solid #FFD166;
-      max-width: 520px;
-      width: 95%;
-      max-height: 85vh;
-      overflow-y: auto;
-      padding: 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-decoration: none;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.4);
+      transition: all 0.2s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.7);
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.25);
     }
 
-    .parent-dialog h2 {
-      font-size: 24px;
-      color: #FFD166;
-      margin-bottom: 6px;
+    /* Category Filter Tabs */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 14px;
+      margin-bottom: 28px;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-tab {
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-tab:hover {
+      color: #FFF;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .filter-tab.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+    }
+
+    /* Games Grid */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
       display: flex;
       align-items: center;
       gap: 10px;
     }
-
-    .parent-section {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 16px;
-      padding: 14px 16px;
-      margin: 16px 0;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+    .section-count {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.06);
+      padding: 2px 8px;
+      border-radius: 6px;
     }
 
-    .parent-section-title {
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 22px;
+      margin-bottom: 48px;
+    }
+
+    /* Game Card */
+    .game-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: relative;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    .game-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--border-glow);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(56, 189, 248, 0.15);
+    }
+
+    .card-thumb-wrap {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #0f172a;
+      overflow: hidden;
+    }
+    .card-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+    .game-card:hover .card-thumb {
+      transform: scale(1.05);
+    }
+    .card-badges-top {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      gap: 6px;
+    }
+    .card-rating {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(8px);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--accent-amber);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .card-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .card-title-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card-title {
       font-size: 16px;
       font-weight: 800;
-      color: #00D2D3;
-      margin-bottom: 12px;
+      color: #FFF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-cat {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      white-space: nowrap;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 14px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex: 1;
     }
 
-    .switch-row {
+    .card-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 0;
-      font-size: 15px;
-      font-weight: 700;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
     }
-
-    .switch-toggle {
-      width: 52px;
-      height: 30px;
-      background: #576574;
-      border-radius: 999px;
-      position: relative;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    .switch-toggle.active {
-      background: #10AC84;
-    }
-    .switch-toggle::after {
-      content: "";
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 24px;
-      height: 24px;
-      background: #FFF;
-      border-radius: 50%;
-      transition: transform 0.2s;
-    }
-    .switch-toggle.active::after {
-      transform: translateX(22px);
-    }
-
-    .parent-btn-action {
-      width: 100%;
-      height: 48px;
-      border-radius: 14px;
-      background: #FF5252;
-      border: none;
-      color: white;
-      font-size: 16px;
-      font-weight: 800;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-
-    .parent-btn-close {
-      width: 100%;
-      height: 50px;
-      border-radius: 999px;
-      background: #FFD166;
-      color: #2D3436;
-      border: none;
-      font-size: 18px;
-      font-weight: 900;
-      cursor: pointer;
-      margin-top: 18px;
-    }
-
-    .license-box {
+    .card-platforms {
+      display: flex;
+      gap: 8px;
+      color: #64748B;
       font-size: 12px;
-      color: #C8D6E5;
-      line-height: 1.6;
-      max-height: 140px;
-      overflow-y: auto;
-      background: #111425;
-      padding: 10px;
-      border-radius: 10px;
     }
+    .btn-card-play {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.15s;
+    }
+    .game-card:hover .btn-card-play {
+      color: #FFF;
+    }
+
+    /* Game Details Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 9, 19, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.active {
+      display: flex;
+    }
+    .modal-dialog {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      max-width: 680px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+    .modal-hero {
+      position: relative;
+      aspect-ratio: 21 / 9;
+      width: 100%;
+      background: #000;
+    }
+    .modal-hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .modal-close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFF;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .modal-body {
+      padding: 24px;
+    }
+    .modal-title {
+      font-size: 26px;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+    .modal-sub {
+      font-size: 13px;
+      color: var(--accent-cyan);
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .modal-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .modal-section {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+    .modal-sec-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #FFF;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .modal-sec-text {
+      font-size: 13px;
+      color: #CBD5E1;
+      line-height: 1.6;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 32px 24px;
+      text-align: center;
+      color: #64748B;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+    footer a { color: var(--text-muted); text-decoration: none; }
+    footer a:hover { color: var(--accent-cyan); }
   </style>
 </head>
 <body>
-
-  <!-- Floating Background Bubbles -->
-  <div class="bg-bubble" style="top:10%; left:5%; width:200px; height:200px;"></div>
-  <div class="bg-bubble" style="top:60%; right:5%; width:280px; height:280px; animation-delay:-3s;"></div>
-
-  <!-- Header -->
   <header>
-    <div class="brand">
-      <div class="brand-icon">⭐</div>
-      <div>
-        <h1 class="brand-title">小小游戏厅</h1>
-        <div class="brand-sub">KIDS ARCADE</div>
+    <a href="/" class="brand-wrap">
+      <div class="brand-logo">🎮</div>
+      <div class="brand-text">
+        <h1>KIDS ARCADE</h1>
+        <span>High Quality Web Arcade</span>
       </div>
-    </div>
+    </a>
     <div class="header-actions">
-      <!-- Sound toggle -->
-      <button class="hdr-btn" id="hall-sound-btn" aria-label="声音开关">🔊</button>
-      
-      <!-- Parent Gear with 2s Long Press Protection -->
-      <button class="hdr-btn parent-btn" id="parent-gear-btn" aria-label="家长设置 (长按2秒进入)">
-        ⚙️
-        <svg class="parent-progress-ring">
-          <circle id="parent-ring-circle" cx="25" cy="25" r="20"></circle>
-        </svg>
-      </button>
+      <input type="text" id="search-input" class="search-input" placeholder="搜索游戏...">
+      <a href="https://github.com/5566-maker/mygames" target="_blank" class="header-btn" aria-label="GitHub 源码">
+        <span>GitHub</span>
+      </a>
     </div>
   </header>
 
-  <!-- Arcade Main Grid -->
   <main>
-    <div class="arcade-grid" id="arcade-grid">
-      
-      <!-- 1. 普通塔防 -->
-      <a href="./games/tower-defense/" class="game-card theme-td" data-game="tower-defense">
-        <div class="card-icon">🏰</div>
-        <div class="card-name">玩具塔防</div>
-        <div class="card-sub">タワーディフェンス</div>
-        <div class="card-badge" id="badge-tower-defense">⭐ 0</div>
-      </a>
+    <!-- Featured Hero Banner -->
+    <div class="hero-banner" id="hero-banner">
+      <img src="./games/apex-formula/hero.svg" alt="Apex Formula" class="hero-img" id="hero-img">
+      <div class="hero-gradient"></div>
+      <div class="hero-content">
+        <div class="hero-tags">
+          <span class="badge gold">★ FEATURED MASTERPIECE</span>
+          <span class="badge">THREE.JS 3D</span>
+          <span class="badge">120Hz PHYSICS</span>
+        </div>
+        <h2 class="hero-title" id="hero-title">APEX FORMULA 3D</h2>
+        <p class="hero-desc" id="hero-desc">AAA 级纯前端程序化 3D F1 赛车竞速。配备高精度物理仿真、动态天气、AI 竞速车队，零外部资源即点即玩。</p>
+        <div class="hero-actions">
+          <a href="./games/apex-formula/" class="btn-primary" id="hero-play-btn">
+            <span>▶ 立即开玩 (PLAY NOW)</span>
+          </a>
+          <button class="btn-secondary" id="hero-details-btn">
+            <span>查看详情 (DETAILS)</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
-      <!-- 2. 肉鸽塔防 -->
-      <a href="./games/rogue-defense/" class="game-card theme-rogue" data-game="rogue-defense">
-        <div class="card-icon">⚡</div>
-        <div class="card-name">魔法城堡</div>
-        <div class="card-sub">マジックディフェンス</div>
-        <div class="card-badge" id="badge-rogue-defense">⭐ 0</div>
-      </a>
+    <!-- Category Filter Bar -->
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-tab active" data-category="all">全部游戏 (All)</button>
+      <button class="filter-tab" data-category="featured">⭐ 精品 3D (Featured)</button>
+      <button class="filter-tab" data-category="Racing">🏎️ 极速赛车 (Racing)</button>
+      <button class="filter-tab" data-category="FPS / Shooter">🎯 射击先锋 (FPS)</button>
+      <button class="filter-tab" data-category="Horror">🕯️ 惊悚逃生 (Horror)</button>
+      <button class="filter-tab" data-category="Action & Runner">⚡ 极速狂奔 (Runner)</button>
+      <button class="filter-tab" data-category="Physics & Sandbox">💣 物理沙盒 (Physics)</button>
+      <button class="filter-tab" data-category="Action & Combat">⚔️ 动作格斗 (Combat)</button>
+      <button class="filter-tab" data-category="Strategy">💎 战术防守 (Strategy)</button>
+      <button class="filter-tab" data-category="Classic & Retro">🕹️ 怀旧经典 (Classic)</button>
+    </div>
 
-      <!-- 3. Drive Mad 风格赛车 -->
-      <a href="./games/drive-mad/" class="game-card theme-drive" data-game="drive-mad">
-        <div class="card-icon">🚙</div>
-        <div class="card-name">疯狂大脚车</div>
-        <div class="card-sub">モンスタートラック</div>
-        <div class="card-badge" id="badge-drive-mad">⭐ 0</div>
-      </a>
+    <!-- Games Section -->
+    <div class="section-header">
+      <div class="section-title">
+        <span id="gallery-title">热门精品推荐</span>
+        <span class="section-count" id="gallery-count">22 GAMES</span>
+      </div>
+    </div>
 
-      <!-- 4. 像素赛车 -->
-      <a href="./games/pixel-racer/" class="game-card theme-pixel" data-game="pixel-racer">
-        <div class="card-icon">🏎️</div>
-        <div class="card-name">像素赛车</div>
-        <div class="card-sub">ピクセルレーサー</div>
-        <div class="card-badge" id="badge-pixel-racer">⭐ 0</div>
-      </a>
-
-      <!-- 5. F1 Racing -->
-      <a href="./games/f1-racer/" class="game-card theme-f1" data-game="f1-racer">
-        <div class="card-icon">🏁</div>
-        <div class="card-name">极速F1赛车</div>
-        <div class="card-sub">レーシングカー</div>
-        <div class="card-badge" id="badge-f1-racer">⭐ 0</div>
-      </a>
-
-      <!-- 6. Spaceship Shooter -->
-      <a href="./games/spaceship/" class="game-card theme-space" data-game="spaceship">
-        <div class="card-icon">✈️</div>
-        <div class="card-name">太空小飞机</div>
-        <div class="card-sub">スペースシューター</div>
-        <div class="card-badge" id="badge-spaceship">⭐ 0</div>
-      </a>
-
-      <!-- 7. Meteor Dodge -->
-      <a href="./games/meteor/" class="game-card theme-meteor" data-game="meteor">
-        <div class="card-icon">🚀</div>
-        <div class="card-name">躲避陨石</div>
-        <div class="card-sub">メテオダッジ</div>
-        <div class="card-badge" id="badge-meteor">⭐ 0</div>
-      </a>
-
-      <!-- 8. Brick Breaker -->
-      <a href="./games/brick-breaker/" class="game-card theme-brick" data-game="brick-breaker">
-        <div class="card-icon">🧱</div>
-        <div class="card-name">糖果打砖块</div>
-        <div class="card-sub">ブロック崩し</div>
-        <div class="card-badge" id="badge-brick-breaker">⭐ 0</div>
-      </a>
-
-      <!-- 9. Flappy 类游戏 (原创快乐小蜜蜂) -->
-      <a href="./games/sky-hopper/" class="game-card theme-sky" data-game="sky-hopper">
-        <div class="card-icon">🐝</div>
-        <div class="card-name">快乐小蜜蜂</div>
-        <div class="card-sub">スカイホッパー</div>
-        <div class="card-badge" id="badge-sky-hopper">⭐ 0</div>
-      </a>
-
-      <!-- 10. Snake (贪吃蛇儿童版) -->
-      <a href="./games/snake/" class="game-card theme-snake" data-game="snake">
-        <div class="card-icon">🐍</div>
-        <div class="card-name">贪吃贪玩蛇</div>
-        <div class="card-sub">スネークゲーム</div>
-        <div class="card-badge" id="badge-snake">⭐ 0</div>
-      </a>
-
-      <!-- 11. Memory Match (动物翻翻乐) -->
-      <a href="./games/memory/" class="game-card theme-memory" data-game="memory">
-        <div class="card-icon">🃏</div>
-        <div class="card-name">动物翻翻乐</div>
-        <div class="card-sub">えあわせカード</div>
-        <div class="card-badge" id="badge-memory">⭐ 0</div>
-      </a>
-
-      <!-- 12. Whack-a-Mole (欢乐打地鼠) -->
-      <a href="./games/whack-mole/" class="game-card theme-mole" data-game="whack-mole">
-        <div class="card-icon">🐭</div>
-        <div class="card-name">欢乐打地鼠</div>
-        <div class="card-sub">もぐらたたき</div>
-        <div class="card-badge" id="badge-whack-mole">⭐ 0</div>
-      </a>
-
+    <div class="games-grid" id="games-grid">
+      <!-- Dynamically Rendered From games.json -->
     </div>
   </main>
 
-  <div id="parent-toast">请按住齿轮 2 秒进入家长设置</div>
+  <!-- Game Details Modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal-dialog" id="modal-dialog">
+      <div class="modal-hero">
+        <img id="m-hero-img" src="" alt="">
+        <button class="modal-close-btn" id="m-btn-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="m-badges" style="display:flex; gap:8px; margin-bottom:8px;"></div>
+        <h2 class="modal-title" id="m-title">Game Title</h2>
+        <div class="modal-sub" id="m-sub">Category · Author</div>
+        <p class="modal-desc" id="m-desc">Description</p>
 
-  <!-- Parent Setting Modal (Long-press 2s triggered) -->
-  <div class="parent-modal" id="parent-modal">
-    <div class="parent-dialog">
-      <h2><span>⚙️</span><span>家长控制中心</span></h2>
-      <p style="font-size:13px; color:#A4B0BE; margin-bottom:14px;">此设置针对家长防沉迷与游戏管理，所有数据保存在本地。</p>
+        <div class="modal-section">
+          <div class="modal-sec-title">🎮 控制操作指南 (CONTROLS)</div>
+          <div class="modal-sec-text" id="m-controls">桌面键盘 / 触控</div>
+        </div>
 
-      <div class="parent-section">
-        <div class="parent-section-title">🔊 音效设置</div>
-        <div class="switch-row">
-          <span>全局游戏音效</span>
-          <div class="switch-toggle active" id="parent-sound-toggle"></div>
+        <div class="modal-section">
+          <div class="modal-sec-title">📄 开源授权与运行环境 (SPECS)</div>
+          <div class="modal-sec-text" id="m-specs">License: MIT · Pure Static / Zero External CDN</div>
+        </div>
+
+        <div class="modal-actions">
+          <a href="#" id="m-btn-play" class="btn-primary" style="flex:1; justify-content:center;">
+            <span>启动全屏游戏 (LAUNCH GAME)</span>
+          </a>
         </div>
       </div>
-
-      <div class="parent-section">
-        <div class="parent-section-title">🎮 游戏显示管理</div>
-        <div id="game-visibility-list">
-          <!-- Dynamically populated -->
-        </div>
-      </div>
-
-      <div class="parent-section">
-        <div class="parent-section-title">🔄 进度管理</div>
-        <p style="font-size:13px; color:#A4B0BE;">重置所有游戏的最高分与获得的星星：</p>
-        <button class="parent-btn-action" id="btn-reset-scores">清空所有游戏记录</button>
-      </div>
-
-      <div class="parent-section">
-        <div class="parent-section-title">📄 版本与开源许可</div>
-        <p style="font-size:12px; color:#A4B0BE; margin-bottom:6px;">版本号：v1.0.0 (Cloudflare Workers Static)</p>
-        <div class="license-box">
-          本项目所有 12 款小游戏均采用 MIT 兼容许可证或原创独立实现。严格剔除广告网络、追踪探针 (Zero Tracker)、第三方外链 CDN。所有资源均支持 Service Worker 离线安全游玩。
-        </div>
-      </div>
-
-      <button class="parent-btn-close" id="btn-close-parent">完成并保存</button>
     </div>
   </div>
 
-  <script src="./shared/game-shell.js"></script>
+  <footer>
+    <p>KIDS ARCADE · Self-hosted High Quality Web Game Arcade</p>
+    <p>Deployed on Cloudflare Workers Static Assets · 100% Ad-Free · Zero Trackers · Permissive Open Source</p>
+  </footer>
+
   <script>
-    // PWA Service Worker Registration
+    'use strict';
+    let allGames = [];
+    let currentCategory = 'all';
+    let searchQuery = '';
+
+    const grid = document.getElementById('games-grid');
+    const galleryTitle = document.getElementById('gallery-title');
+    const galleryCount = document.getElementById('gallery-count');
+    const modalBackdrop = document.getElementById('modal-backdrop');
+
+    // Fetch and render games from games.json
+    async function loadGames() {
+      try {
+        const res = await fetch('./games.json');
+        if (res.ok) {
+          allGames = await res.json();
+          renderGrid();
+        }
+      } catch (e) {
+        console.error('Failed to load games.json', e);
+      }
+    }
+
+    function renderGrid() {
+      grid.innerHTML = '';
+
+      const filtered = allGames.filter(g => {
+        const matchesCategory = currentCategory === 'all'
+          ? true
+          : (currentCategory === 'featured' ? g.featured : g.category === currentCategory);
+
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = !q || g.title.toLowerCase().includes(q) || (g.chineseTitle && g.chineseTitle.toLowerCase().includes(q)) || g.category.toLowerCase().includes(q);
+
+        return matchesCategory && matchesSearch;
+      });
+
+      galleryCount.textContent = `${filtered.length} GAMES`;
+
+      filtered.forEach(game => {
+        const card = document.createElement('div');
+        card.className = 'game-card';
+        card.innerHTML = `
+          <div class="card-thumb-wrap">
+            <img src="${game.cover}" alt="${game.title}" class="card-thumb" loading="lazy">
+            <div class="card-badges-top">
+              <span class="badge">${game.category}</span>
+              ${game.featured ? '<span class="badge gold">3D</span>' : ''}
+            </div>
+            ${game.rating ? `<div class="card-rating">★ ${game.rating}</div>` : ''}
+          </div>
+          <div class="card-body">
+            <div class="card-title-row">
+              <h3 class="card-title">${game.chineseTitle || game.title}</h3>
+              <span class="card-cat">${game.title}</span>
+            </div>
+            <p class="card-desc">${game.description || ''}</p>
+            <div class="card-footer">
+              <div class="card-platforms">
+                ${game.desktop ? '💻' : ''}
+                ${game.mobile ? '📱' : ''}
+                ${game.gamepad ? '🎮' : ''}
+              </div>
+              <div class="btn-card-play">
+                <span>详情 / 开始 ▶</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        card.onclick = (e) => {
+          openGameModal(game);
+        };
+
+        grid.appendChild(card);
+      });
+    }
+
+    // Modal Details Logic
+    function openGameModal(game) {
+      document.getElementById('m-hero-img').src = game.hero || game.cover;
+      document.getElementById('m-title').textContent = game.chineseTitle ? `${game.chineseTitle} (${game.title})` : game.title;
+      document.getElementById('m-sub').textContent = `${game.category} · Author: ${game.author || 'OpenSource'}`;
+      document.getElementById('m-desc').textContent = game.description || '';
+
+      // Controls breakdown
+      let controlsHtml = '';
+      if (game.controls) {
+        if (game.controls.desktop) controlsHtml += `<strong>💻 桌面键鼠:</strong> ${game.controls.desktop}<br/>`;
+        if (game.controls.mobile) controlsHtml += `<strong>📱 触控操作:</strong> ${game.controls.mobile}<br/>`;
+        if (game.controls.gamepad) controlsHtml += `<strong>🎮 游戏手柄:</strong> ${game.controls.gamepad}`;
+      } else {
+        controlsHtml = '支持触控点击与常规键鼠操作。';
+      }
+      document.getElementById('m-controls').innerHTML = controlsHtml;
+
+      // Specs
+      document.getElementById('m-specs').innerHTML = `
+        <strong>开源授权:</strong> ${game.license || 'MIT'}<br/>
+        <strong>技术栈:</strong> ${(game.tags || []).join(' · ')}<br/>
+        <strong>部署模式:</strong> 本地纯静态执行 (100% Zero External CDN)
+      `;
+
+      // Play button
+      document.getElementById('m-btn-play').href = `./games/${game.id}/`;
+
+      modalBackdrop.classList.add('active');
+    }
+
+    document.getElementById('m-btn-close').onclick = () => {
+      modalBackdrop.classList.remove('active');
+    };
+    modalBackdrop.onclick = (e) => {
+      if (e.target === modalBackdrop) modalBackdrop.classList.remove('active');
+    };
+
+    // Filter Buttons
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCategory = btn.dataset.category;
+        galleryTitle.textContent = btn.textContent;
+        renderGrid();
+      };
+    });
+
+    // Search Input
+    document.getElementById('search-input').addEventListener('input', e => {
+      searchQuery = e.target.value.trim();
+      renderGrid();
+    });
+
+    // Hero details button
+    document.getElementById('hero-details-btn').onclick = () => {
+      const featured = allGames.find(g => g.id === 'apex-formula');
+      if (featured) openGameModal(featured);
+    };
+
+    // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
 
-    // Load Badges (Stars)
-    const games = [
-      'tower-defense', 'rogue-defense', 'drive-mad', 'pixel-racer',
-      'f1-racer', 'spaceship', 'meteor', 'brick-breaker',
-      'sky-hopper', 'snake', 'memory', 'whack-mole'
-    ];
-
-    function updateBadges() {
-      games.forEach(g => {
-        const badge = document.getElementById(`badge-${g}`);
-        if (badge && window.KidStorage) {
-          const stars = window.KidStorage.getStars(g);
-          const score = window.KidStorage.getScore(g);
-          badge.textContent = `⭐ ${stars || 0}  🏆 ${score || 0}`;
-        }
-      });
-    }
-
-    updateBadges();
-
-    // Sound button in header
-    const hallSoundBtn = document.getElementById('hall-sound-btn');
-    function refreshSoundIcon() {
-      hallSoundBtn.textContent = window.KidAudio.enabled ? '🔊' : '🔇';
-    }
-    refreshSoundIcon();
-    hallSoundBtn.addEventListener('click', () => {
-      window.KidAudio.toggle();
-      refreshSoundIcon();
-      document.getElementById('parent-sound-toggle').classList.toggle('active', window.KidAudio.enabled);
-    });
-
-    // Parent Long-Press 2 Seconds Trigger
-    const gearBtn = document.getElementById('parent-gear-btn');
-    const ringCircle = document.getElementById('parent-ring-circle');
-    const toast = document.getElementById('parent-toast');
-    let pressTimer = null;
-    let pressStartTime = 0;
-    const PRESS_DURATION = 2000;
-
-    function startPress(e) {
-      pressStartTime = Date.now();
-      ringCircle.style.strokeDashoffset = '125.6';
-      
-      pressTimer = setInterval(() => {
-        const elapsed = Date.now() - pressStartTime;
-        const progress = Math.min(1, elapsed / PRESS_DURATION);
-        ringCircle.style.strokeDashoffset = (125.6 * (1 - progress)).toString();
-
-        if (progress >= 1) {
-          clearInterval(pressTimer);
-          pressTimer = null;
-          openParentModal();
-        }
-      }, 30);
-    }
-
-    function cancelPress() {
-      if (pressTimer) {
-        clearInterval(pressTimer);
-        pressTimer = null;
-        ringCircle.style.strokeDashoffset = '125.6';
-        if (Date.now() - pressStartTime < 1000) {
-          showToast('请按住齿轮 2 秒进入家长设置');
-        }
-      }
-    }
-
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 2000);
-    }
-
-    gearBtn.addEventListener('touchstart', startPress, { passive: true });
-    gearBtn.addEventListener('touchend', cancelPress);
-    gearBtn.addEventListener('mousedown', startPress);
-    gearBtn.addEventListener('mouseup', cancelPress);
-    gearBtn.addEventListener('mouseleave', cancelPress);
-
-    // Parent Modal logic
-    const parentModal = document.getElementById('parent-modal');
-    const parentSoundToggle = document.getElementById('parent-sound-toggle');
-    const btnCloseParent = document.getElementById('btn-close-parent');
-    const btnResetScores = document.getElementById('btn-reset-scores');
-
-    function openParentModal() {
-      parentSoundToggle.classList.toggle('active', window.KidAudio.enabled);
-      buildGameVisibilityList();
-      parentModal.classList.add('active');
-      window.KidAudio.playPowerup();
-    }
-
-    btnCloseParent.addEventListener('click', () => {
-      parentModal.classList.remove('active');
-      window.KidAudio.playTap();
-      applyGameVisibility();
-    });
-
-    parentSoundToggle.addEventListener('click', () => {
-      window.KidAudio.toggle();
-      parentSoundToggle.classList.toggle('active', window.KidAudio.enabled);
-      refreshSoundIcon();
-    });
-
-    btnResetScores.addEventListener('click', () => {
-      if (confirm('确定要清空所有游戏的得分与星星记录吗？')) {
-        games.forEach(g => {
-          localStorage.removeItem(`arcade_score_${g}`);
-          localStorage.removeItem(`arcade_stars_${g}`);
-        });
-        updateBadges();
-        alert('记录已重置！');
-      }
-    });
-
-    const gameNames = {
-      'tower-defense': '🏰 玩具塔防',
-      'rogue-defense': '⚡ 魔法城堡',
-      'drive-mad': '🚙 疯狂大脚车',
-      'pixel-racer': '🏎️ 像素赛车',
-      'f1-racer': '🏁 极速F1赛车',
-      'spaceship': '✈️ 太空小飞机',
-      'meteor': '🚀 躲避陨石',
-      'brick-breaker': '🧱 糖果打砖块',
-      'sky-hopper': '🐝 快乐小蜜蜂',
-      'snake': '🐍 贪吃贪玩蛇',
-      'memory': '🃏 动物翻翻乐',
-      'whack-mole': '🐭 欢乐打地鼠'
-    };
-
-    function buildGameVisibilityList() {
-      const container = document.getElementById('game-visibility-list');
-      container.innerHTML = '';
-      const hiddenGames = JSON.parse(localStorage.getItem('arcade_hidden_games') || '[]');
-
-      games.forEach(g => {
-        const isHidden = hiddenGames.includes(g);
-        const row = document.createElement('div');
-        row.className = 'switch-row';
-        row.innerHTML = `
-          <span>${gameNames[g] || g}</span>
-          <div class="switch-toggle ${isHidden ? '' : 'active'}" data-game="${g}"></div>
-        `;
-        row.querySelector('.switch-toggle').onclick = function() {
-          this.classList.toggle('active');
-          const nowActive = this.classList.contains('active');
-          let currentHidden = JSON.parse(localStorage.getItem('arcade_hidden_games') || '[]');
-          if (nowActive) {
-            currentHidden = currentHidden.filter(item => item !== g);
-          } else {
-            if (!currentHidden.includes(g)) currentHidden.push(g);
-          }
-          localStorage.setItem('arcade_hidden_games', JSON.stringify(currentHidden));
-        };
-        container.appendChild(row);
-      });
-    }
-
-    function applyGameVisibility() {
-      const hiddenGames = JSON.parse(localStorage.getItem('arcade_hidden_games') || '[]');
-      games.forEach(g => {
-        const card = document.querySelector(`.game-card[data-game="${g}"]`);
-        if (card) {
-          card.style.display = hiddenGames.includes(g) ? 'none' : 'flex';
-        }
-      });
-    }
-    applyGameVisibility();
+    loadGames();
   </script>
 </body>
 </html>

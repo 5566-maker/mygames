@@ -1,0 +1,10 @@
+{
+  "id": "whack-mole",
+  "title": "Happy Whack-a-Mole",
+  "category": "Classic & Retro",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}

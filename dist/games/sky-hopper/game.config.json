@@ -1,0 +1,10 @@
+{
+  "id": "sky-hopper",
+  "title": "Happy Bee Sky Hopper",
+  "category": "Classic & Retro",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "fullscreen": true,
+  "license": "MIT"
+}
