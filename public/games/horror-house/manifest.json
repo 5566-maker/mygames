@@ -1,9 +1,0 @@
-{
-  "name": "Bridge Horror House",
-  "short_name": "HorrorHouse",
-  "start_url": "./",
-  "display": "fullscreen",
-  "orientation": "landscape",
-  "background_color": "#000000",
-  "theme_color": "#000000"
-}

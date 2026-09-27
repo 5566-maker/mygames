@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>魔法钢琴块 - Piano Tiles</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden; background: #080c14;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #FFF;
+    }
+
+    #game-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    }
+
+    /* Top HUD */
+    #hud {
+      position: absolute; top: 60px; left: 0; right: 0;
+      display: flex; justify-content: center; pointer-events: none; z-index: 10;
+    }
+    .score-badge {
+      background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
+      border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 999px;
+      padding: 8px 28px; color: #38BDF8; font-size: 28px; font-weight: 900;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5); font-family: monospace;
+    }
+
+    /* Overlay */
+    #overlay {
+      position: absolute; inset: 0; background: rgba(8, 12, 20, 0.9);
+      backdrop-filter: blur(14px); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 20; color: #FFF;
+      padding: 24px; text-align: center;
+    }
+    .game-logo {
+      font-size: clamp(36px, 8vw, 64px); font-weight: 900;
+      background: linear-gradient(135deg, #38BDF8, #818CF8, #C084FC);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 8px; letter-spacing: 2px;
+    }
+    .game-sub { font-size: 15px; color: #94A3B8; margin-bottom: 32px; font-weight: 600; }
+    .btn-start {
+      padding: 16px 52px; border-radius: 999px;
+      background: linear-gradient(135deg, #38BDF8, #0284C7); border: none;
+      color: #FFF; font-size: 18px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
+    }
+    .hint-bar { margin-top: 24px; font-size: 13px; color: #64748B; }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="hud">
+    <div class="score-badge" id="score-text">0</div>
+  </div>
+
+  <div id="overlay">
+    <h1 class="game-logo" id="overlay-title">魔法钢琴块</h1>
+    <p class="game-sub" id="overlay-sub">跟随音乐节奏点击黑色琴键，千万别踩白块！</p>
+    <button class="btn-start" id="btn-start">开始弹奏 (START)</button>
+    <p class="hint-bar">👆 iPad 多指触控专属 · 速度随得分持续提升！</p>
+  </div>
+
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    'use strict';
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const LANES = 4;
+    // Ode to Joy melody frequencies (Hz)
+    const MELODY = [
+      329.63, 329.63, 349.23, 392.00, 392.00, 349.23, 329.63, 293.66,
+      261.63, 261.63, 293.66, 329.63, 329.63, 293.66, 293.66,
+      329.63, 329.63, 349.23, 392.00, 392.00, 349.23, 329.63, 293.66,
+      261.63, 261.63, 293.66, 329.63, 293.66, 261.63, 261.63,
+      293.66, 293.66, 329.63, 261.63, 293.66, 349.23, 329.63, 261.63,
+      293.66, 349.23, 329.63, 293.66, 261.63, 293.66, 196.00
+    ];
+
+    let W, H;
+    let laneW = 0;
+    let trackX = 0, trackW = 0;
+    let tiles = [];
+    let ripples = [];
+    let noteIdx = 0;
+    let score = 0;
+    let speed = 6.0;
+    let isPlaying = false;
+    let audioCtx = null;
+
+    const scoreText = document.getElementById('score-text');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlaySub = document.getElementById('overlay-sub');
+    const btnStart = document.getElementById('btn-start');
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+
+      trackW = Math.min(W, 460);
+      trackX = (W - trackW) / 2;
+      laneW = trackW / LANES;
+    }
+    window.addEventListener('resize', resize);
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playPianoNote(freq) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.6);
+    }
+
+    function initTiles() {
+      tiles = [];
+      noteIdx = 0;
+      score = 0;
+      speed = 6.0;
+      scoreText.textContent = '0';
+
+      const tileH = H * 0.22;
+      for (let i = 0; i < 6; i++) {
+        const lane = Math.floor(Math.random() * LANES);
+        const y = H - (i + 1) * tileH;
+        tiles.push({
+          lane,
+          y,
+          h: tileH,
+          hit: false,
+          noteFreq: MELODY[noteIdx % MELODY.length]
+        });
+        noteIdx++;
+      }
+    }
+
+    function spawnNextTile() {
+      const tileH = H * 0.22;
+      const topTile = tiles[tiles.length - 1];
+      const y = topTile ? topTile.y - tileH : -tileH;
+      const lane = Math.floor(Math.random() * LANES);
+
+      tiles.push({
+        lane,
+        y,
+        h: tileH,
+        hit: false,
+        noteFreq: MELODY[noteIdx % MELODY.length]
+      });
+      noteIdx++;
+    }
+
+    function tap(clientX, clientY) {
+      if (!isPlaying) return;
+      initAudio();
+
+      if (clientX < trackX || clientX > trackX + trackW) return;
+      const tappedLane = Math.floor((clientX - trackX) / laneW);
+
+      // Find the lowest unhit tile
+      let targetTile = null;
+      for (let i = 0; i < tiles.length; i++) {
+        if (!tiles[i].hit) {
+          targetTile = tiles[i];
+          break;
+        }
+      }
+
+      if (targetTile && targetTile.lane === tappedLane && clientY >= targetTile.y - 40 && clientY <= targetTile.y + targetTile.h + 40) {
+        // Hit!
+        targetTile.hit = true;
+        score++;
+        speed = 6.0 + Math.min(score * 0.08, 12);
+        scoreText.textContent = score;
+
+        playPianoNote(targetTile.noteFreq);
+
+        ripples.push({
+          x: trackX + tappedLane * laneW + laneW / 2,
+          y: clientY,
+          r: 10,
+          alpha: 0.8
+        });
+      } else {
+        // Tapped wrong lane / white area! Game Over
+        gameOver(clientX, clientY);
+      }
+    }
+
+    function gameOver(failX, failY) {
+      isPlaying = false;
+      window.ArcadeSound.playHit();
+      window.KidStorage.saveScore('piano-tiles', score);
+
+      overlay.style.display = 'flex';
+      overlayTitle.textContent = '失误踩空白！';
+      overlaySub.textContent = `完美演奏: ${score} 块琴键！`;
+      btnStart.textContent = '再来一曲 (PLAY AGAIN)';
+    }
+
+    function startGame() {
+      initAudio();
+      initTiles();
+      overlay.style.display = 'none';
+      isPlaying = true;
+      window.ArcadeSound.playWin();
+    }
+    btnStart.onclick = startGame;
+
+    // Multi-touch Pointer Handling
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      tap(e.clientX, e.clientY);
+    });
+
+    // Keyboard support for desktop: D, F, J, K
+    window.addEventListener('keydown', (e) => {
+      if (!isPlaying) return;
+      const key = e.key.toLowerCase();
+      let lane = -1;
+      if (key === 'd' || key === '1') lane = 0;
+      if (key === 'f' || key === '2') lane = 1;
+      if (key === 'j' || key === '3') lane = 2;
+      if (key === 'k' || key === '4') lane = 3;
+
+      if (lane !== -1) {
+        const x = trackX + lane * laneW + laneW / 2;
+        let targetTile = null;
+        for (let i = 0; i < tiles.length; i++) {
+          if (!tiles[i].hit) {
+            targetTile = tiles[i];
+            break;
+          }
+        }
+        tap(x, targetTile ? targetTile.y + targetTile.h / 2 : H * 0.7);
+      }
+    });
+
+    // Game loop
+    function loop() {
+      requestAnimationFrame(loop);
+
+      ctx.fillStyle = '#080c14';
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw 4 Track Lanes
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(trackX, 0, trackW, H);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= LANES; i++) {
+        const lx = trackX + i * laneW;
+        ctx.beginPath();
+        ctx.moveTo(lx, 0);
+        ctx.lineTo(lx, H);
+        ctx.stroke();
+      }
+
+      if (isPlaying) {
+        // Move tiles down
+        for (let i = 0; i < tiles.length; i++) {
+          tiles[i].y += speed;
+        }
+
+        // Spawn new tile if top is low enough
+        const topTile = tiles[tiles.length - 1];
+        if (topTile && topTile.y > -topTile.h) {
+          spawnNextTile();
+        }
+
+        // Check if unhit tile reached bottom (Missed!)
+        if (tiles[0] && tiles[0].y > H) {
+          if (!tiles[0].hit) {
+            gameOver(trackX + tiles[0].lane * laneW + laneW / 2, H - 20);
+            return;
+          }
+          tiles.shift();
+        }
+      }
+
+      // Draw Tiles
+      tiles.forEach(t => {
+        const tx = trackX + t.lane * laneW + 4;
+        const tw = laneW - 8;
+
+        if (t.hit) {
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+        } else {
+          ctx.fillStyle = '#1e293b';
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(tx, t.y, tw, t.h - 4, 12);
+        ctx.fill();
+
+        if (!t.hit) {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Shiny line
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.fillRect(tx + 8, t.y + 6, tw - 16, 4);
+        }
+      });
+
+      // Draw Ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const r = ripples[i];
+        r.r += 6;
+        r.alpha -= 0.04;
+        if (r.alpha <= 0) {
+          ripples.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        ctx.strokeStyle = `rgba(56, 189, 248, ${r.alpha})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    resize();
+    initTiles();
+    loop();
+  </script>
+</body>
+</html>

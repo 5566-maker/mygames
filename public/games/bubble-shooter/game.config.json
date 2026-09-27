@@ -1,0 +1,22 @@
+{
+  "id": "bubble-shooter",
+  "title": "Bubble Shooter",
+  "chineseTitle": "炫彩泡泡龙",
+  "category": "Puzzle & Arcade",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "gamepad": false,
+  "fullscreen": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "Arcade Team",
+  "description": "经典趣味弹射消珠！按住 iPad 屏幕拖出精准折射瞄准虚线，松开发射彩色泡泡，连接 3 个以上相同颜色泡泡触发清屏爆破！",
+  "controls": {
+    "mobile": "按住屏幕拖动瞄准虚线，松开发射泡泡",
+    "desktop": "移动鼠标瞄准，左键点击发射泡泡",
+    "gamepad": "摇杆瞄准，A 键发射"
+  },
+  "tags": ["Touch Native", "Shooter", "Puzzle", "Bubbles"]
+}

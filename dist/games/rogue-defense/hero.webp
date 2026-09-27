@@ -40,7 +40,7 @@
   <g transform="translate(120, 600)">
     <!-- Category Badge -->
     <rect width="130" height="34" rx="8" fill="rgba(255,255,255,0.12)" stroke="#8b5cf6" stroke-width="1.5"/>
-    <text x="65" y="22" font-family="-apple-system, sans-serif" font-size="13" font-weight="800" fill="#8b5cf6" text-anchor="middle" letter-spacing="1.5">RETRO · ROGUE</text>
+    <text x="65" y="22" font-family="-apple-system, sans-serif" font-size="13" font-weight="800" fill="#8b5cf6" text-anchor="middle" letter-spacing="1.5">TOUCH · ROGUE</text>
 
     <!-- Main Title -->
     <text x="0" y="90" font-family="-apple-system, 'Segoe UI', Roboto, sans-serif" font-size="64" font-weight="900" fill="#FFFFFF" letter-spacing="2" filter="drop-shadow(0 4px 16px rgba(0,0,0,0.8))">MAGIC CASTLE</text>

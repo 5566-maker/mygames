@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>3D 螺旋球 - Helix Jump 3D</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden; background: #0b101d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: none;
+    }
+    #game-container { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    /* Top HUD */
+    #hud {
+      position: absolute; top: 60px; left: 0; right: 0;
+      display: flex; flex-direction: column; align-items: center;
+      pointer-events: none; z-index: 10;
+    }
+    .score-box {
+      font-size: clamp(48px, 12vw, 76px); font-weight: 900;
+      color: #FFF; text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      line-height: 1; margin-bottom: 4px;
+    }
+    .level-tag {
+      font-size: 14px; font-weight: 800; color: #38BDF8; letter-spacing: 2px;
+      background: rgba(15, 23, 42, 0.7); padding: 4px 16px; border-radius: 999px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    /* Overlay */
+    #overlay {
+      position: absolute; inset: 0; background: rgba(11, 16, 29, 0.9);
+      backdrop-filter: blur(14px); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 20; color: #FFF;
+      padding: 24px; text-align: center;
+    }
+    .game-logo {
+      font-size: clamp(36px, 8vw, 64px); font-weight: 900;
+      background: linear-gradient(135deg, #38BDF8, #818CF8, #F43F5E);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 8px; letter-spacing: 2px;
+    }
+    .game-sub { font-size: 15px; color: #94A3B8; margin-bottom: 32px; font-weight: 600; }
+    .btn-start {
+      padding: 16px 52px; border-radius: 999px;
+      background: linear-gradient(135deg, #38BDF8, #0284C7); border: none;
+      color: #FFF; font-size: 18px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
+    }
+    .hint-bar { margin-top: 24px; font-size: 13px; color: #64748B; }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <div id="hud">
+    <div class="score-box" id="score-text">0</div>
+    <div class="level-tag" id="level-text">LEVEL 1</div>
+  </div>
+
+  <div id="overlay">
+    <h1 class="game-logo" id="overlay-title">3D 螺旋球</h1>
+    <p class="game-sub" id="overlay-sub">左右滑动屏幕旋转立柱，穿过缺口避开红色区域！</p>
+    <button class="btn-start" id="btn-start">开始下坠 (START)</button>
+    <p class="hint-bar">👆 iPad 触控专属 · 3D 旋转下坠与弹力物理！</p>
+  </div>
+
+  <script src="../../shared/game-shell.js"></script>
+  <script type="module">
+    import * as THREE from '../../shared/three.module.js';
+
+    let scene, camera, renderer;
+    let towerGroup, ballMesh;
+    let ball = { y: 2, vy: 0, r: 0.55, targetY: 2 };
+    let rings = [];
+    let particles = [];
+    let score = 0;
+    let isPlaying = false;
+    let towerRotation = 0;
+
+    const RING_DISTANCE = 4.0;
+    const TOTAL_RINGS = 25;
+    const TOWER_RADIUS = 3.2;
+
+    const container = document.getElementById('game-container');
+    const scoreText = document.getElementById('score-text');
+    const levelText = document.getElementById('level-text');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlaySub = document.getElementById('overlay-sub');
+    const btnStart = document.getElementById('btn-start');
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0b101d);
+      scene.fog = new THREE.FogExp2(0x0b101d, 0.02);
+
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 4, 11);
+      camera.lookAt(0, 1.5, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      container.appendChild(renderer.domElement);
+
+      // Lights
+      const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(ambLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      dirLight.position.set(10, 20, 15);
+      dirLight.castShadow = true;
+      scene.add(dirLight);
+
+      buildTower();
+      createBall();
+      setupEvents();
+      animate();
+    }
+
+    function buildTower() {
+      if (towerGroup) scene.remove(towerGroup);
+      towerGroup = new THREE.Group();
+      scene.add(towerGroup);
+      rings = [];
+
+      // Central Column
+      const colGeo = new THREE.CylinderGeometry(1.2, 1.2, TOTAL_RINGS * RING_DISTANCE + 20, 32);
+      const colMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+      const col = new THREE.Mesh(colGeo, colMat);
+      col.position.y = - (TOTAL_RINGS * RING_DISTANCE) / 2 + 5;
+      towerGroup.add(col);
+
+      // Rings
+      for (let i = 0; i < TOTAL_RINGS; i++) {
+        const ringY = -i * RING_DISTANCE;
+        const ringG = new THREE.Group();
+        ringG.position.y = ringY;
+
+        // Sectors around 360 deg
+        const numSectors = 12;
+        const gapIndex1 = Math.floor(Math.random() * numSectors);
+        const gapIndex2 = (gapIndex1 + 1) % numSectors; // 2-sector wide gap
+
+        const dangerIndex = (gapIndex1 + 4 + Math.floor(Math.random() * 4)) % numSectors;
+
+        const sectors = [];
+        for (let s = 0; s < numSectors; s++) {
+          if (s === gapIndex1 || s === gapIndex2) continue; // Gap!
+
+          const isDanger = (i > 0 && s === dangerIndex);
+          const startAngle = (s / numSectors) * Math.PI * 2;
+          const arc = (1 / numSectors) * Math.PI * 2;
+
+          const shape = new THREE.Shape();
+          // Arc sector
+          shape.absarc(0, 0, TOWER_RADIUS, startAngle, startAngle + arc, false);
+          shape.lineTo(Math.cos(startAngle + arc) * 1.2, Math.sin(startAngle + arc) * 1.2);
+          shape.absarc(0, 0, 1.2, startAngle + arc, startAngle, true);
+          shape.closePath();
+
+          const extrudeSettings = { depth: 0.35, bevelEnabled: false };
+          const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+          const mat = new THREE.MeshLambertMaterial({
+            color: isDanger ? 0xef4444 : (i % 2 === 0 ? 0x38bdf8 : 0x818cf8)
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.rotation.x = Math.PI / 2;
+          mesh.receiveShadow = true;
+          ringG.add(mesh);
+
+          sectors.push({
+            startAngle,
+            endAngle: startAngle + arc,
+            isDanger
+          });
+        }
+
+        ringG.userData = { y: ringY, sectors };
+        towerGroup.add(ringG);
+        rings.push(ringG);
+      }
+    }
+
+    function createBall() {
+      const geo = new THREE.SphereGeometry(ball.r, 24, 24);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.2, metalness: 0.5 });
+      ballMesh = new THREE.Mesh(geo, mat);
+      ballMesh.position.set(0, ball.y, TOWER_RADIUS * 0.65);
+      ballMesh.castShadow = true;
+      scene.add(ballMesh);
+    }
+
+    function bounce() {
+      ball.vy = 0.24;
+      window.ArcadeSound.playTone(320, 220, 'sine', 0.08, 0.2);
+      spawnSplatter(ballMesh.position);
+    }
+
+    function spawnSplatter(pos) {
+      for (let i = 0; i < 12; i++) {
+        const pGeo = new THREE.SphereGeometry(0.08, 6, 6);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+        const p = new THREE.Mesh(pGeo, pMat);
+        p.position.copy(pos);
+        p.userData = {
+          vx: (Math.random() - 0.5) * 4,
+          vy: Math.random() * 2 + 1,
+          vz: (Math.random() - 0.5) * 4,
+          life: 0.5
+        };
+        scene.add(p);
+        particles.push(p);
+      }
+    }
+
+    function gameOver() {
+      isPlaying = false;
+      window.ArcadeSound.playHit();
+      window.KidStorage.saveScore('helix-jump', score);
+
+      overlay.style.display = 'flex';
+      overlayTitle.textContent = '触碰危险区域！';
+      overlaySub.textContent = `最终得分: ${score} 层！`;
+      btnStart.textContent = '再玩一次 (PLAY AGAIN)';
+    }
+
+    function winGame() {
+      isPlaying = false;
+      window.ArcadeSound.playWin();
+      score += 100;
+      window.KidStorage.saveScore('helix-jump', score);
+
+      overlay.style.display = 'flex';
+      overlayTitle.textContent = '完美通关！';
+      overlaySub.textContent = `你已穿透所有螺旋层！总分: ${score}`;
+      btnStart.textContent = '下一难度';
+    }
+
+    function startGame() {
+      score = 0;
+      scoreText.textContent = '0';
+      ball.y = 2;
+      ball.vy = 0;
+      towerRotation = 0;
+      buildTower();
+      overlay.style.display = 'none';
+      isPlaying = true;
+      window.ArcadeSound.playWin();
+    }
+    btnStart.onclick = startGame;
+
+    // Touch Event Handling - 100% iPad Touch Drag
+    let prevTouchX = 0;
+    let isDragging = false;
+
+    container.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      prevTouchX = e.clientX;
+    });
+
+    container.addEventListener('pointermove', (e) => {
+      e.preventDefault();
+      if (!isDragging || !isPlaying) return;
+      const dx = e.clientX - prevTouchX;
+      prevTouchX = e.clientX;
+      towerRotation += dx * 0.012;
+      towerGroup.rotation.y = towerRotation;
+    });
+
+    function endDrag() { isDragging = false; }
+    container.addEventListener('pointerup', endDrag);
+    container.addEventListener('pointercancel', endDrag);
+
+    // Keyboard support for desktop: A/D or arrows
+    window.addEventListener('keydown', (e) => {
+      if (!isPlaying) return;
+      if (e.key === 'ArrowLeft' || e.key === 'a') {
+        towerRotation += 0.12;
+        towerGroup.rotation.y = towerRotation;
+      } else if (e.key === 'ArrowRight' || e.key === 'd') {
+        towerRotation -= 0.12;
+        towerGroup.rotation.y = towerRotation;
+      }
+    });
+
+    function setupEvents() {
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (isPlaying) {
+        ball.vy -= 0.014; // Gravity
+        ball.y += ball.vy;
+
+        // Check collision with nearest ring below ball
+        const ballPosInTower = ball.y;
+        // Ball angle relative to tower
+        let angle = (-towerRotation) % (Math.PI * 2);
+        if (angle < 0) angle += Math.PI * 2;
+
+        let landed = false;
+        for (let i = 0; i < rings.length; i++) {
+          const ring = rings[i];
+          const ry = ring.userData.y;
+
+          if (ball.y <= ry + ball.r && ball.y >= ry - 0.4 && ball.vy < 0) {
+            // Check if ball landed on a sector or fell through gap
+            const sectorHit = ring.userData.sectors.find(s => angle >= s.startAngle && angle <= s.endAngle);
+
+            if (sectorHit) {
+              if (sectorHit.isDanger) {
+                gameOver();
+                return;
+              } else {
+                ball.y = ry + ball.r;
+                bounce();
+                landed = true;
+                break;
+              }
+            } else {
+              // Plunged through gap!
+              score += 5;
+              scoreText.textContent = score;
+              window.ArcadeSound.playTone(450 + score * 4, 600, 'sine', 0.06);
+              if (i === rings.length - 1) {
+                winGame();
+                return;
+              }
+            }
+          }
+        }
+
+        // Camera follow ball smoothly
+        camera.position.y += (ball.y + 2.5 - camera.position.y) * 0.1;
+        camera.lookAt(0, ball.y, 0);
+
+        ballMesh.position.y = ball.y;
+      }
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.position.x += p.userData.vx * 0.02;
+        p.position.y += p.userData.vy * 0.02;
+        p.position.z += p.userData.vz * 0.02;
+        p.userData.vy -= 0.15;
+        p.userData.life -= 0.03;
+        if (p.userData.life <= 0) {
+          scene.remove(p);
+          particles.splice(i, 1);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    init();
+  </script>
+</body>
+</html>

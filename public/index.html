@@ -601,18 +601,18 @@
   <main>
     <!-- Featured Hero Banner -->
     <div class="hero-banner" id="hero-banner">
-      <img src="./games/apex-formula/hero.svg" alt="Apex Formula" class="hero-img" id="hero-img">
+      <img src="./games/stack-3d/hero.svg" alt="Stack 3D" class="hero-img" id="hero-img">
       <div class="hero-gradient"></div>
       <div class="hero-content">
         <div class="hero-tags">
-          <span class="badge gold">★ FEATURED MASTERPIECE</span>
+          <span class="badge gold">★ IPAD 触控精选</span>
           <span class="badge">THREE.JS 3D</span>
-          <span class="badge">120Hz PHYSICS</span>
+          <span class="badge">100% 纯指尖操作</span>
         </div>
-        <h2 class="hero-title" id="hero-title">APEX FORMULA 3D</h2>
-        <p class="hero-desc" id="hero-desc">AAA 级纯前端程序化 3D F1 赛车竞速。配备高精度物理仿真、动态天气、AI 竞速车队，零外部资源即点即玩。</p>
+        <h2 class="hero-title" id="hero-title">STACK 3D · 3D 叠叠乐</h2>
+        <p class="hero-desc" id="hero-desc">iPad 专属 3D 几何叠高塔！单指轻触屏幕任意位置精准切块堆叠，完美重合触发连续清脆音阶与连击特效，无需键盘鼠标。</p>
         <div class="hero-actions">
-          <a href="./games/apex-formula/" class="btn-primary" id="hero-play-btn">
+          <a href="./games/stack-3d/" class="btn-primary" id="hero-play-btn">
             <span>▶ 立即开玩 (PLAY NOW)</span>
           </a>
           <button class="btn-secondary" id="hero-details-btn">
@@ -624,23 +624,23 @@
 
     <!-- Category Filter Bar -->
     <div class="filter-bar" id="filter-bar">
-      <button class="filter-tab active" data-category="all">全部游戏 (All)</button>
-      <button class="filter-tab" data-category="featured">⭐ 精品 3D (Featured)</button>
-      <button class="filter-tab" data-category="Racing">🏎️ 极速赛车 (Racing)</button>
-      <button class="filter-tab" data-category="FPS / Shooter">🎯 射击先锋 (FPS)</button>
-      <button class="filter-tab" data-category="Horror">🕯️ 惊悚逃生 (Horror)</button>
-      <button class="filter-tab" data-category="Action & Runner">⚡ 极速狂奔 (Runner)</button>
-      <button class="filter-tab" data-category="Physics & Sandbox">💣 物理沙盒 (Physics)</button>
-      <button class="filter-tab" data-category="Action & Combat">⚔️ 动作格斗 (Combat)</button>
-      <button class="filter-tab" data-category="Strategy">💎 战术防守 (Strategy)</button>
-      <button class="filter-tab" data-category="Classic & Retro">🕹️ 怀旧经典 (Classic)</button>
+      <button class="filter-tab active" data-category="all">全部触控游戏 (All)</button>
+      <button class="filter-tab" data-category="featured">⭐ 精选推荐 (Featured)</button>
+      <button class="filter-tab" data-category="Casual & 3D">🌀 3D 触控 (3D Touch)</button>
+      <button class="filter-tab" data-category="Action & Arcade">🍉 动作射击 (Action)</button>
+      <button class="filter-tab" data-category="Sports & Touch">🏒 桌面竞技 (Sports)</button>
+      <button class="filter-tab" data-category="Puzzle & Logic">🔢 益智烧脑 (Puzzle)</button>
+      <button class="filter-tab" data-category="Puzzle & Casual">💎 宝石消除 (Match-3)</button>
+      <button class="filter-tab" data-category="Rhythm & Music">🎹 音乐节奏 (Rhythm)</button>
+      <button class="filter-tab" data-category="Strategy & Defense">🏰 战术防守 (Strategy)</button>
+      <button class="filter-tab" data-category="Physics & Racing">🚙 物理竞速 (Racing)</button>
     </div>
 
     <!-- Games Section -->
     <div class="section-header">
       <div class="section-title">
-        <span id="gallery-title">热门精品推荐</span>
-        <span class="section-count" id="gallery-count">22 GAMES</span>
+        <span id="gallery-title">iPad 触控精选游戏</span>
+        <span class="section-count" id="gallery-count">20 GAMES</span>
       </div>
     </div>
 
@@ -822,7 +822,7 @@
 
     // Hero details button
     document.getElementById('hero-details-btn').onclick = () => {
-      const featured = allGames.find(g => g.id === 'apex-formula');
+      const featured = allGames.find(g => g.id === 'stack-3d');
       if (featured) openGameModal(featured);
     };
 

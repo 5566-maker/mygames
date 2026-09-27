@@ -1,0 +1,22 @@
+{
+  "id": "fruit-slice",
+  "title": "Fruit Slice",
+  "chineseTitle": "水果切切切",
+  "category": "Casual & Arcade",
+  "orientation": "any",
+  "mobile": true,
+  "desktop": true,
+  "gamepad": false,
+  "fullscreen": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "Arcade Team",
+  "description": "iPad 触控经典切割游戏！手指划过屏幕形成绚丽刀光切开空中抛掷的水果，支持多指同时切割与连击加成，小心避开炸弹！",
+  "controls": {
+    "mobile": "单指或多指在 iPad 屏幕滑动切割水果",
+    "desktop": "按住鼠标左键拖拽划动切割",
+    "gamepad": "触控/鼠标操作"
+  },
+  "tags": ["Touch Native", "Canvas", "Multi-touch", "Arcade"]
+}

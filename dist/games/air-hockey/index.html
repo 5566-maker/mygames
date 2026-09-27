@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>极速气垫球 - Air Hockey</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden; background: #080c18;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    #game-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    }
+
+    /* Top HUD */
+    #hud {
+      position: absolute; top: 60px; left: 24px; right: 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      pointer-events: none; z-index: 10;
+    }
+    .score-board {
+      background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
+      border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 999px;
+      padding: 8px 24px; color: #FFF; font-size: 20px; font-weight: 900;
+      display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    .score-p1 { color: #38BDF8; }
+    .score-p2 { color: #EF4444; }
+
+    /* Overlay */
+    #overlay {
+      position: absolute; inset: 0; background: rgba(8, 12, 24, 0.88);
+      backdrop-filter: blur(14px); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 20; color: #FFF;
+      padding: 24px; text-align: center;
+    }
+    .game-logo {
+      font-size: clamp(36px, 8vw, 64px); font-weight: 900;
+      background: linear-gradient(135deg, #38BDF8, #EF4444);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 8px; letter-spacing: 2px;
+    }
+    .game-sub { font-size: 15px; color: #94A3B8; margin-bottom: 32px; font-weight: 600; }
+    .mode-row { display: flex; gap: 14px; margin-bottom: 24px; }
+    .btn-mode {
+      padding: 14px 28px; border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.2);
+      color: #FFF; font-size: 16px; font-weight: 800; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-mode.active {
+      background: rgba(56, 189, 248, 0.25); border-color: #38BDF8; color: #38BDF8;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+    }
+    .btn-start {
+      padding: 16px 52px; border-radius: 999px;
+      background: linear-gradient(135deg, #38BDF8, #0284C7); border: none;
+      color: #FFF; font-size: 18px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
+    }
+    .hint-bar { margin-top: 24px; font-size: 13px; color: #64748B; }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="hud">
+    <div class="score-board">
+      <span class="score-p2" id="score-p2">0</span>
+      <span style="color:#64748B;">:</span>
+      <span class="score-p1" id="score-p1">0</span>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <h1 class="game-logo" id="overlay-title">极速气垫球</h1>
+    <p class="game-sub" id="overlay-sub">拖动手柄击打冰球，率先进够 7 球获胜！</p>
+    <div class="mode-row">
+      <button class="btn-mode active" id="mode-1p">🤖 单人挑战电脑</button>
+      <button class="btn-mode" id="mode-2p">👥 iPad 面对面双人</button>
+    </div>
+    <button class="btn-start" id="btn-start">开 球 (START)</button>
+    <p class="hint-bar">👆 iPad 专属触控体验 · 支持多指拖拽手柄！</p>
+  </div>
+
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    'use strict';
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let W, H;
+    let table = { x: 0, y: 0, w: 0, h: 0 };
+    let puck = { x: 0, y: 0, vx: 0, vy: 0, r: 18 };
+    let p1 = { x: 0, y: 0, vx: 0, vy: 0, r: 32, color: '#38BDF8', pointerId: null };
+    let p2 = { x: 0, y: 0, vx: 0, vy: 0, r: 32, color: '#EF4444', pointerId: null };
+    let score1 = 0, score2 = 0;
+    let gameMode = '1p'; // '1p' or '2p'
+    let isPlaying = false;
+    let sparks = [];
+
+    const scoreP1 = document.getElementById('score-p1');
+    const scoreP2 = document.getElementById('score-p2');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlaySub = document.getElementById('overlay-sub');
+    const btnStart = document.getElementById('btn-start');
+    const mode1p = document.getElementById('mode-1p');
+    const mode2p = document.getElementById('mode-2p');
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+
+      // Fit 1:1.6 table aspect ratio
+      const margin = 20;
+      const topSafe = 70;
+      const availW = W - margin * 2;
+      const availH = H - margin - topSafe;
+
+      let tw = availW;
+      let th = tw * 1.55;
+      if (th > availH) {
+        th = availH;
+        tw = th / 1.55;
+      }
+
+      table.x = (W - tw) / 2;
+      table.y = topSafe + (availH - th) / 2;
+      table.w = tw;
+      table.h = th;
+
+      resetPositions();
+    }
+    window.addEventListener('resize', resize);
+
+    function resetPositions() {
+      puck.x = table.x + table.w / 2;
+      puck.y = table.y + table.h / 2;
+      puck.vx = (Math.random() - 0.5) * 4;
+      puck.vy = (Math.random() < 0.5 ? 1 : -1) * 6;
+
+      p1.x = table.x + table.w / 2;
+      p1.y = table.y + table.h * 0.82;
+      p1.vx = 0; p1.vy = 0;
+
+      p2.x = table.x + table.w / 2;
+      p2.y = table.y + table.h * 0.18;
+      p2.vx = 0; p2.vy = 0;
+    }
+
+    mode1p.onclick = () => {
+      gameMode = '1p';
+      mode1p.classList.add('active');
+      mode2p.classList.remove('active');
+    };
+    mode2p.onclick = () => {
+      gameMode = '2p';
+      mode2p.classList.add('active');
+      mode1p.classList.remove('active');
+    };
+
+    function startMatch() {
+      score1 = 0;
+      score2 = 0;
+      scoreP1.textContent = '0';
+      scoreP2.textContent = '0';
+      resetPositions();
+      overlay.style.display = 'none';
+      isPlaying = true;
+      window.ArcadeSound.playWin();
+    }
+    btnStart.onclick = startMatch;
+
+    function handleGoal(scorer) {
+      window.ArcadeSound.playPowerup();
+      if (scorer === 1) {
+        score1++;
+        scoreP1.textContent = score1;
+        spawnSparks(table.x + table.w / 2, table.y, '#38BDF8');
+      } else {
+        score2++;
+        scoreP2.textContent = score2;
+        spawnSparks(table.x + table.w / 2, table.y + table.h, '#EF4444');
+      }
+
+      if (score1 >= 7 || score2 >= 7) {
+        isPlaying = false;
+        overlay.style.display = 'flex';
+        overlayTitle.textContent = score1 >= 7 ? 'PLAYER 1 获胜！' : (gameMode === '1p' ? '电脑获胜！' : 'PLAYER 2 获胜！');
+        overlaySub.textContent = `最终比分: ${score1} - ${score2}`;
+        btnStart.textContent = '再来一局';
+        window.KidStorage.saveScore('air-hockey', score1 * 10);
+      } else {
+        resetPositions();
+      }
+    }
+
+    function spawnSparks(x, y, color) {
+      for (let i = 0; i < 35; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = Math.random() * 10 + 3;
+        sparks.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          color,
+          alpha: 1.0,
+          r: Math.random() * 4 + 2
+        });
+      }
+    }
+
+    // Touch Event Handling
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const x = e.clientX, y = e.clientY;
+      const midY = table.y + table.h / 2;
+
+      // Assign pointer to P1 (bottom) or P2 (top)
+      if (y > midY && p1.pointerId === null) {
+        p1.pointerId = e.pointerId;
+        p1.x = x; p1.y = y;
+      } else if (y <= midY && gameMode === '2p' && p2.pointerId === null) {
+        p2.pointerId = e.pointerId;
+        p2.x = x; p2.y = y;
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      e.preventDefault();
+      const x = e.clientX, y = e.clientY;
+      const midY = table.y + table.h / 2;
+
+      if (e.pointerId === p1.pointerId) {
+        const clampedX = Math.max(table.x + p1.r, Math.min(table.x + table.w - p1.r, x));
+        const clampedY = Math.max(midY + p1.r, Math.min(table.y + table.h - p1.r, y));
+        p1.vx = clampedX - p1.x;
+        p1.vy = clampedY - p1.y;
+        p1.x = clampedX;
+        p1.y = clampedY;
+      } else if (e.pointerId === p2.pointerId && gameMode === '2p') {
+        const clampedX = Math.max(table.x + p2.r, Math.min(table.x + table.w - p2.r, x));
+        const clampedY = Math.max(table.y + p2.r, Math.min(midY - p2.r, y));
+        p2.vx = clampedX - p2.x;
+        p2.vy = clampedY - p2.y;
+        p2.x = clampedX;
+        p2.y = clampedY;
+      }
+    });
+
+    function releasePointer(e) {
+      if (e.pointerId === p1.pointerId) { p1.pointerId = null; p1.vx = 0; p1.vy = 0; }
+      if (e.pointerId === p2.pointerId) { p2.pointerId = null; p2.vx = 0; p2.vy = 0; }
+    }
+    canvas.addEventListener('pointerup', releasePointer);
+    canvas.addEventListener('pointercancel', releasePointer);
+
+    // AI logic for 1P mode
+    function updateAI() {
+      const midY = table.y + table.h / 2;
+      let targetX = table.x + table.w / 2;
+      let targetY = table.y + table.h * 0.18;
+
+      if (puck.y < midY + 40) {
+        targetX = puck.x;
+        targetY = Math.max(table.y + p2.r, Math.min(midY - p2.r, puck.y - 10));
+      }
+
+      const dx = targetX - p2.x;
+      const dy = targetY - p2.y;
+      const speed = 7.5;
+      p2.vx = Math.max(-speed, Math.min(speed, dx * 0.2));
+      p2.vy = Math.max(-speed, Math.min(speed, dy * 0.2));
+      p2.x += p2.vx;
+      p2.y += p2.vy;
+    }
+
+    // Physics
+    function collideMalletPuck(mallet) {
+      const dx = puck.x - mallet.x;
+      const dy = puck.y - mallet.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = mallet.r + puck.r;
+
+      if (dist < minDist) {
+        const nx = dx / (dist || 1);
+        const ny = dy / (dist || 1);
+
+        // Separate
+        puck.x = mallet.x + nx * minDist;
+        puck.y = mallet.y + ny * minDist;
+
+        // Impart velocity
+        const relativeVx = puck.vx - mallet.vx;
+        const relativeVy = puck.vy - mallet.vy;
+        const speed = Math.hypot(relativeVx, relativeVy);
+        puck.vx = nx * (speed + 4) * 0.95 + mallet.vx * 0.6;
+        puck.vy = ny * (speed + 4) * 0.95 + mallet.vy * 0.6;
+
+        // Cap speed
+        const curSpd = Math.hypot(puck.vx, puck.vy);
+        if (curSpd > 24) {
+          puck.vx = (puck.vx / curSpd) * 24;
+          puck.vy = (puck.vy / curSpd) * 24;
+        }
+
+        window.ArcadeSound.playTone(550, 400, 'square', 0.05, 0.2);
+      }
+    }
+
+    function loop() {
+      requestAnimationFrame(loop);
+
+      ctx.fillStyle = '#080c18';
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw Rink Table
+      ctx.save();
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 4;
+      ctx.roundRect(table.x, table.y, table.w, table.h, 24);
+      ctx.fill();
+      ctx.stroke();
+
+      // Table Markings
+      const midY = table.y + table.h / 2;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(table.x, midY);
+      ctx.lineTo(table.x + table.w, midY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(table.x + table.w / 2, midY, table.w * 0.2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Goals
+      const goalW = table.w * 0.42;
+      const goalLeft = table.x + (table.w - goalW) / 2;
+
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+      ctx.fillRect(goalLeft, table.y - 8, goalW, 12);
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+      ctx.fillRect(goalLeft, table.y + table.h - 4, goalW, 12);
+      ctx.restore();
+
+      if (isPlaying) {
+        if (gameMode === '1p') updateAI();
+
+        // Update Puck
+        puck.x += puck.vx;
+        puck.y += puck.vy;
+        puck.vx *= 0.992; // Low friction
+        puck.vy *= 0.992;
+
+        collideMalletPuck(p1);
+        collideMalletPuck(p2);
+
+        // Wall collisions
+        if (puck.x - puck.r < table.x) {
+          puck.x = table.x + puck.r;
+          puck.vx = -puck.vx;
+          window.ArcadeSound.playTone(350, 250, 'sine', 0.04);
+        } else if (puck.x + puck.r > table.x + table.w) {
+          puck.x = table.x + table.w - puck.r;
+          puck.vx = -puck.vx;
+          window.ArcadeSound.playTone(350, 250, 'sine', 0.04);
+        }
+
+        // Top/Bottom Goal vs Wall
+        if (puck.y - puck.r < table.y) {
+          if (puck.x > goalLeft && puck.x < goalLeft + goalW) {
+            handleGoal(1); // P1 scores in top goal!
+          } else {
+            puck.y = table.y + puck.r;
+            puck.vy = -puck.vy;
+          }
+        } else if (puck.y + puck.r > table.y + table.h) {
+          if (puck.x > goalLeft && puck.x < goalLeft + goalW) {
+            handleGoal(2); // P2 scores in bottom goal!
+          } else {
+            puck.y = table.y + table.h - puck.r;
+            puck.vy = -puck.vy;
+          }
+        }
+      }
+
+      // Draw Mallets
+      [p1, p2].forEach(p => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+
+        // Inner knob
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 0.45, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFF';
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Draw Puck
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#FACC15';
+      ctx.shadowColor = '#FACC15';
+      ctx.shadowBlur = 18;
+      ctx.fill();
+      ctx.restore();
+
+      // Sparks
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const s = sparks[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        s.alpha -= 0.02;
+        if (s.alpha <= 0) { sparks.splice(i, 1); continue; }
+        ctx.fillStyle = s.color;
+        ctx.globalAlpha = s.alpha;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    resize();
+    loop();
+  </script>
+</body>
+</html>

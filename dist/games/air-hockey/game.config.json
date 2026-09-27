@@ -1,0 +1,22 @@
+{
+  "id": "air-hockey",
+  "title": "Air Hockey Table",
+  "chineseTitle": "极速气垫球",
+  "category": "Sports & Touch",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "gamepad": false,
+  "fullscreen": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "Arcade Team",
+  "description": "iPad 桌面双人/单人极速对战！手指按住击球柄在冰面上极速推挡撞击冰球，支持智能 AI 对决，以及 iPad 平放桌面的面对面双人对战！",
+  "controls": {
+    "mobile": "手指按住己方球柄拖动击打冰球，双人模式两侧各自控制",
+    "desktop": "鼠标按住拖动击球",
+    "gamepad": "触控/鼠标操作"
+  },
+  "tags": ["Touch Native", "Physics", "2-Player", "iPad Tabletop"]
+}

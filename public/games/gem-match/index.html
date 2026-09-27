@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>宝石消消乐 - Gem Match-3</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden; background: #0c0a1d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #FFF;
+    }
+
+    #game-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    }
+
+    /* Top HUD */
+    #hud {
+      position: absolute; top: 60px; left: 24px; right: 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      pointer-events: none; z-index: 10;
+    }
+    .hud-box {
+      background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
+      border: 1px solid rgba(192, 132, 252, 0.3); border-radius: 999px;
+      padding: 8px 20px; color: #FFF; font-size: 16px; font-weight: 800;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 8px;
+    }
+    .hud-val { color: #C084FC; font-size: 20px; font-weight: 900; }
+
+    /* Overlay */
+    #overlay {
+      position: absolute; inset: 0; background: rgba(12, 10, 29, 0.9);
+      backdrop-filter: blur(14px); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 20; color: #FFF;
+      padding: 24px; text-align: center;
+    }
+    .game-logo {
+      font-size: clamp(36px, 8vw, 64px); font-weight: 900;
+      background: linear-gradient(135deg, #C084FC, #38BDF8, #F43F5E);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 8px; letter-spacing: 2px;
+    }
+    .game-sub { font-size: 15px; color: #E9D5FF; margin-bottom: 32px; font-weight: 600; }
+    .btn-start {
+      padding: 16px 52px; border-radius: 999px;
+      background: linear-gradient(135deg, #C084FC, #9333EA); border: none;
+      color: #FFF; font-size: 18px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 0 25px rgba(192, 132, 252, 0.5);
+    }
+    .hint-bar { margin-top: 24px; font-size: 13px; color: #7E22CE; }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="hud">
+    <div class="hud-box">
+      <span>💎 得分:</span><span class="hud-val" id="score-text">0</span>
+    </div>
+    <div class="hud-box">
+      <span>⏳ 步数:</span><span class="hud-val" id="moves-text" style="color:#FACC15;">25</span>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <h1 class="game-logo" id="overlay-title">宝石消消乐</h1>
+    <p class="game-sub" id="overlay-sub">滑动或点击交换相邻宝石，三个同色即可消除！</p>
+    <button class="btn-start" id="btn-start">开始消除 (PLAY)</button>
+    <p class="hint-bar">👆 iPad 触控专属 · 华丽特效与消除连招！</p>
+  </div>
+
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    'use strict';
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const ROWS = 8;
+    const COLS = 8;
+    const GEM_TYPES = [
+      { emoji: '💎', color: '#38BDF8' }, // Diamond
+      { emoji: '🔮', color: '#C084FC' }, // Amethyst
+      { emoji: '🔶', color: '#F97316' }, // Amber
+      { emoji: '💚', color: '#10B981' }, // Emerald
+      { emoji: '❤️', color: '#EF4444' }  // Ruby
+    ];
+
+    let W, H;
+    let board = { x: 0, y: 0, size: 0, cellSize: 0 };
+    let grid = []; // 8x8 array of gem type index
+    let selectedCell = null; // {r, c}
+    let score = 0;
+    let moves = 25;
+    let isPlaying = false;
+    let isAnimating = false;
+    let particles = [];
+
+    const scoreText = document.getElementById('score-text');
+    const movesText = document.getElementById('moves-text');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlaySub = document.getElementById('overlay-sub');
+    const btnStart = document.getElementById('btn-start');
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+
+      const topSafe = 80;
+      const margin = 20;
+      const maxW = Math.min(W - margin * 2, 520);
+      const maxH = Math.min(H - margin * 2 - topSafe, 520);
+      const size = Math.min(maxW, maxH);
+
+      board.size = size;
+      board.cellSize = size / COLS;
+      board.x = (W - size) / 2;
+      board.y = topSafe + (H - topSafe - size) / 2;
+    }
+    window.addEventListener('resize', resize);
+
+    function initBoard() {
+      grid = [];
+      for (let r = 0; r < ROWS; r++) {
+        const row = [];
+        for (let c = 0; c < COLS; c++) {
+          row.push(Math.floor(Math.random() * GEM_TYPES.length));
+        }
+        grid.push(row);
+      }
+      // Clear any initial matches
+      removeMatchesSilent();
+    }
+
+    function removeMatchesSilent() {
+      let matches = findMatches();
+      while (matches.length > 0) {
+        matches.forEach(m => {
+          grid[m.r][m.c] = Math.floor(Math.random() * GEM_TYPES.length);
+        });
+        matches = findMatches();
+      }
+    }
+
+    function findMatches() {
+      const matched = new Set();
+      // Horizontal matches
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS - 2; c++) {
+          const type = grid[r][c];
+          if (type !== null && type === grid[r][c + 1] && type === grid[r][c + 2]) {
+            matched.add(`${r},${c}`);
+            matched.add(`${r},${c + 1}`);
+            matched.add(`${r},${c + 2}`);
+          }
+        }
+      }
+      // Vertical matches
+      for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS - 2; r++) {
+          const type = grid[r][c];
+          if (type !== null && type === grid[r + 1][c] && type === grid[r + 2][c]) {
+            matched.add(`${r},${c}`);
+            matched.add(`${r + 1},${c}`);
+            matched.add(`${r + 2},${c}`);
+          }
+        }
+      }
+      return Array.from(matched).map(s => {
+        const [r, c] = s.split(',').map(Number);
+        return { r, c };
+      });
+    }
+
+    function spawnFireworks(x, y, color) {
+      for (let i = 0; i < 20; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = Math.random() * 8 + 2;
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          r: Math.random() * 4 + 2,
+          color,
+          alpha: 1.0
+        });
+      }
+    }
+
+    async function processMatches() {
+      isAnimating = true;
+      let matches = findMatches();
+      let combo = 0;
+
+      while (matches.length > 0) {
+        combo++;
+        const pts = matches.length * 10 * combo;
+        score += pts;
+        scoreText.textContent = score;
+
+        window.ArcadeSound.playTone(300 + combo * 70, 700, 'sine', 0.1, 0.2);
+
+        // Explode matched gems
+        matches.forEach(m => {
+          const gem = GEM_TYPES[grid[m.r][m.c]];
+          if (gem) {
+            const gx = board.x + m.c * board.cellSize + board.cellSize / 2;
+            const gy = board.y + m.r * board.cellSize + board.cellSize / 2;
+            spawnFireworks(gx, gy, gem.color);
+          }
+          grid[m.r][m.c] = null;
+        });
+
+        await new Promise(res => setTimeout(res, 220));
+
+        // Gravity drop
+        for (let c = 0; c < COLS; c++) {
+          let emptyRow = ROWS - 1;
+          for (let r = ROWS - 1; r >= 0; r--) {
+            if (grid[r][c] !== null) {
+              if (r !== emptyRow) {
+                grid[emptyRow][c] = grid[r][c];
+                grid[r][c] = null;
+              }
+              emptyRow--;
+            }
+          }
+          // Fill top with new gems
+          while (emptyRow >= 0) {
+            grid[emptyRow][c] = Math.floor(Math.random() * GEM_TYPES.length);
+            emptyRow--;
+          }
+        }
+
+        await new Promise(res => setTimeout(res, 200));
+        matches = findMatches();
+      }
+
+      isAnimating = false;
+
+      if (moves <= 0) {
+        endGame();
+      }
+    }
+
+    async function trySwap(r1, c1, r2, c2) {
+      if (isAnimating) return;
+
+      // Swap
+      const temp = grid[r1][c1];
+      grid[r1][c1] = grid[r2][c2];
+      grid[r2][c2] = temp;
+
+      const matches = findMatches();
+      if (matches.length > 0) {
+        moves--;
+        movesText.textContent = moves;
+        window.ArcadeSound.playTap();
+        await processMatches();
+      } else {
+        // Swap back
+        window.ArcadeSound.playHit();
+        await new Promise(res => setTimeout(res, 150));
+        grid[r2][c2] = grid[r1][c1];
+        grid[r1][c1] = temp;
+      }
+    }
+
+    function endGame() {
+      isPlaying = false;
+      window.ArcadeSound.playWin();
+      window.KidStorage.saveScore('gem-match', score);
+
+      overlay.style.display = 'flex';
+      overlayTitle.textContent = '步数耗尽！';
+      overlaySub.textContent = `最终得分: ${score} 分！`;
+      btnStart.textContent = '再玩一次';
+    }
+
+    function startGame() {
+      score = 0;
+      moves = 25;
+      scoreText.textContent = '0';
+      movesText.textContent = '25';
+      selectedCell = null;
+      initBoard();
+      overlay.style.display = 'none';
+      isPlaying = true;
+      window.ArcadeSound.playWin();
+    }
+    btnStart.onclick = startGame;
+
+    // Touch Event Handling
+    let touchStartPos = null;
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!isPlaying || isAnimating) return;
+      const x = e.clientX, y = e.clientY;
+
+      if (x >= board.x && x <= board.x + board.size && y >= board.y && y <= board.y + board.size) {
+        const c = Math.floor((x - board.x) / board.cellSize);
+        const r = Math.floor((y - board.y) / board.cellSize);
+        touchStartPos = { x, y, r, c };
+
+        if (!selectedCell) {
+          selectedCell = { r, c };
+          window.ArcadeSound.playTap();
+        } else {
+          // Check adjacency
+          const dr = Math.abs(selectedCell.r - r);
+          const dc = Math.abs(selectedCell.c - c);
+          if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+            trySwap(selectedCell.r, selectedCell.c, r, c);
+            selectedCell = null;
+          } else {
+            selectedCell = { r, c };
+            window.ArcadeSound.playTap();
+          }
+        }
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isPlaying || isAnimating || !touchStartPos) return;
+      const dx = e.clientX - touchStartPos.x;
+      const dy = e.clientY - touchStartPos.y;
+      const threshold = board.cellSize * 0.4;
+
+      if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+        let targetR = touchStartPos.r;
+        let targetC = touchStartPos.c;
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+          targetC += dx > 0 ? 1 : -1;
+        } else {
+          targetR += dy > 0 ? 1 : -1;
+        }
+
+        if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
+          trySwap(touchStartPos.r, touchStartPos.c, targetR, targetC);
+          selectedCell = null;
+          touchStartPos = null;
+        }
+      }
+    });
+
+    canvas.addEventListener('pointerup', () => { touchStartPos = null; });
+    canvas.addEventListener('pointercancel', () => { touchStartPos = null; });
+
+    // Loop
+    function loop() {
+      requestAnimationFrame(loop);
+
+      ctx.fillStyle = '#0c0a1d';
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw Board BG
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+      ctx.strokeStyle = 'rgba(192, 132, 252, 0.2)';
+      ctx.lineWidth = 3;
+      ctx.roundRect(board.x - 8, board.y - 8, board.size + 16, board.size + 16, 20);
+      ctx.fill();
+      ctx.stroke();
+
+      // Cells
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cx = board.x + c * board.cellSize;
+          const cy = board.y + r * board.cellSize;
+
+          // Slot BG
+          ctx.fillStyle = (r + c) % 2 === 0 ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.06)';
+          ctx.fillRect(cx, cy, board.cellSize, board.cellSize);
+
+          // Selected highlight
+          if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
+            ctx.fillStyle = 'rgba(192, 132, 252, 0.35)';
+            ctx.strokeStyle = '#C084FC';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(cx + 2, cy + 2, board.cellSize - 4, board.cellSize - 4);
+            ctx.fillRect(cx + 2, cy + 2, board.cellSize - 4, board.cellSize - 4);
+          }
+
+          // Draw Gem
+          const val = grid[r] && grid[r][c];
+          if (val !== null && val !== undefined) {
+            const gem = GEM_TYPES[val];
+            ctx.font = `${board.cellSize * 0.65}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(gem.emoji, cx + board.cellSize / 2, cy + board.cellSize / 2);
+          }
+        }
+      }
+      ctx.restore();
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.25;
+        p.alpha -= 0.025;
+        if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    resize();
+    initBoard();
+    loop();
+  </script>
+</body>
+</html>

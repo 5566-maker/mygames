@@ -1,107 +1,120 @@
 # Third-Party Notices & Open Source Licenses
 
-This project, **Self-hosted High Quality Web Game Arcade** (`game.yuewang.eu.cc`), integrates and adapts various high-quality open-source games and libraries. All games are operated under permissive open-source licenses (predominantly MIT License). All external advertising networks, trackers, commercial SDKs, and third-party remote CDN dependencies have been completely removed or localized.
+This project, **Self-hosted High Quality Web Game Arcade** (`game.yuewang.eu.cc`), is a 100% iPad and Mobile Touch-Native arcade platform. All games operate under permissive open-source licenses (predominantly MIT License). All external advertising networks, trackers, commercial SDKs, and third-party remote CDN dependencies have been completely removed or localized.
 
 ---
 
-## 1. High-Quality Featured Games
+## 1. iPad & Mobile Touch-Native Games
 
-### 1.1 APEX FORMULA
-- **Project Name:** APEX FORMULA (极速方程 3D)
-- **Original Author:** BridgeMind
-- **Repository:** https://github.com/bridge-mind/apex-formula
+### 1.1 Stack 3D (3D 叠叠乐)
+- **Engine / Tech:** Three.js (ES Module), WebGL, Web Audio API
 - **License:** MIT License
-- **Asset License:** 100% Procedural Generation in Three.js (No external asset files)
-- **Music / Audio:** Procedural Web Audio API sound synthesis
-- **Modifications:** Integrated unified Game Shell navigation and orientation handling; stripped any external telemetry.
+- **Controls:** 100% One-Tap Touch Native (iPad screen touch / mouse click)
+- **Asset License:** 100% Procedural geometries and dynamic lighting
 
-### 1.2 Turbo Kart Rush
-- **Project Name:** Turbo Kart Rush (极速卡丁车 3D)
-- **Original Author:** BridgeMind
-- **Repository:** https://github.com/bridge-mind/turbo-kart-rush
+### 1.2 Fruit Slice (水果切切切)
+- **Engine / Tech:** HTML5 Canvas, Multi-touch Pointer Events, Web Audio API
 - **License:** MIT License
-- **Asset License:** 100% Procedural Generation in Three.js
-- **Music / Audio:** Web Audio API sound synthesis
-- **Modifications:** Integrated unified Game Shell; verified standalone static execution.
+- **Controls:** Multi-touch blade trail slicing across iPad screen
+- **Asset License:** Procedural vector rendering & emojis
 
-### 1.3 HexGL
-- **Project Name:** HexGL (未来反重力竞速)
-- **Original Author:** Thibaut Despoulain (BKcore)
-- **Repository:** https://github.com/BKcore/HexGL
-- **License:** MIT License
-- **Asset License:** MIT (Original 3D meshes by Charnel, track textures by Nobiax)
-- **Music / Audio:** Localized HTML5 Audio / Web Audio
-- **Modifications:** Completely removed legacy Google Analytics script (`UA-26274524-4`), removed external social widgets, integrated modern unified Game Shell.
+### 1.3 2048 Master (经典 2048)
+- **Engine / Tech:** HTML5 DOM / CSS Grid, Touch Gestures, Web Audio API
+- **License:** MIT License (based on Gabriele Cirulli's 2048)
+- **Controls:** 4-directional touch swipe gesture & accessible on-screen buttons
 
-### 1.4 Operation Ironhold
-- **Project Name:** Operation Ironhold (铁垒行动 3D)
-- **Original Author:** StarKnightt (Prasenjit Nayak)
-- **Repository:** https://github.com/StarKnightt/operation-ironhold
+### 1.4 Air Hockey Table (极速气垫球)
+- **Engine / Tech:** HTML5 Canvas, Elastic Physics Engine, Web Audio API
 - **License:** MIT License
-- **Asset License:** 100% Procedural textures and geometries in Three.js
-- **Music / Audio:** Procedural Web Audio synthesized gunshots, ricochets, footsteps
-- **Modifications:** Replaced CDNjs Three.js script with locally hosted `three.min.js`, integrated unified Game Shell, added safe area styling.
+- **Controls:** Direct touch drag for mallets (Single-player AI & 2-Player iPad Tabletop)
 
-### 1.5 Dead Signal: Exclusion Zone
-- **Project Name:** Dead Signal: Exclusion Zone (死亡信标：绝境撤离)
-- **Original Author:** BridgeMind
-- **Repository:** https://github.com/bridge-mind/claude-opus-5.5-zombies-game
+### 1.5 Gem Match-3 (宝石消消乐)
+- **Engine / Tech:** HTML5 Canvas, Match-3 Grid Engine, Particle Cascade
 - **License:** MIT License
-- **Asset License:** 100% Procedural 3D assets in Three.js
-- **Music / Audio:** Procedural audio synthesis
-- **Modifications:** Built with Vite into a single self-contained bundle, integrated unified Game Shell.
+- **Controls:** Touch tap / drag adjacent gems to swap
 
-### 1.6 Bridge Horror House
-- **Project Name:** Bridge Horror House (古宅惊魂 3D)
-- **Original Author:** BridgeMind
-- **Repository:** https://github.com/bridge-mind/bridge-horror-house
+### 1.6 Bubble Shooter (炫彩泡泡龙)
+- **Engine / Tech:** HTML5 Canvas, Raycasting Reflection Trajectory, BFS Cluster Pop
 - **License:** MIT License
-- **Asset License:** 100% Procedural textures and 3D geometries
-- **Music / Audio:** Procedural ambient wind, rain, thunder, and monster audio
-- **Modifications:** Built into static assets with Vite, integrated unified Game Shell.
+- **Controls:** Touch drag dotted aiming line with wall reflection, release to fire
 
-### 1.7 Neon Velocity 3D
-- **Project Name:** Neon Velocity 3D (霓虹极速狂奔)
-- **Original Author:** OpenSource Arcade Community
-- **Repository:** https://github.com/5566-maker/mygames
+### 1.7 Piano Tiles (魔法钢琴块)
+- **Engine / Tech:** HTML5 Canvas, Web Audio Polyphonic Synthesizer
 - **License:** MIT License
-- **Asset License:** Procedural Three.js geometries and shaders
-- **Music / Audio:** Procedural Web Audio Synthwave bassline & SFX
+- **Controls:** Multi-touch lane tapping on iPad
 
-### 1.8 Ragdoll Demolition 3D
-- **Project Name:** Ragdoll Demolition 3D (物理拆迁大乱斗)
-- **Original Author:** OpenSource Arcade Community
-- **Repository:** https://github.com/5566-maker/mygames
+### 1.8 Helix Jump 3D (3D 螺旋球)
+- **Engine / Tech:** Three.js (ES Module), 3D Cylinder & Sector Geometry, Gravity Physics
 - **License:** MIT License
-- **Asset License:** Procedural Three.js & rigid body simulation
-- **Music / Audio:** Web Audio procedural blast and crumbling SFX
-
-### 1.9 Stick & Steel Arena 3D
-- **Project Name:** Stick & Steel Arena 3D (刀剑竞技场 3D)
-- **Original Author:** OpenSource Arcade Community
-- **Repository:** https://github.com/5566-maker/mygames
-- **License:** MIT License
-- **Asset License:** Procedural Three.js meshes
-- **Music / Audio:** Web Audio procedural combat clangs and horns
-
-### 1.10 Crystal Defense 3D
-- **Project Name:** Crystal Defense 3D (水晶守护者 3D)
-- **Original Author:** OpenSource Arcade Community
-- **Repository:** https://github.com/5566-maker/mygames
-- **License:** MIT License
-- **Asset License:** Procedural low-poly Three.js geometries
-- **Music / Audio:** Web Audio procedural spell and projectile SFX
+- **Controls:** Single finger horizontal drag to rotate 3D helix tower
 
 ---
 
-## 2. Core Libraries & Dependencies
+## 2. Touch-Optimized Classic Games
 
-### Three.js
+### 2.1 Toy Tower Defense (玩具塔防)
+- **Engine / Tech:** HTML5 Canvas 2D, Pathfinding & Tower Targeting
 - **License:** MIT License
-- **Copyright:** (c) 2010-2026 Three.js Authors
-- **Hosted:** Localized statically in `public/shared/vendor/` and game packages. Zero CDN dependencies.
+- **Controls:** Touch tap to build and upgrade towers
+
+### 2.2 Magic Castle (魔法城堡防守)
+- **Engine / Tech:** HTML5 Canvas 2D, Roguelike Ability System
+- **License:** MIT License
+- **Controls:** Touch spell cards and roguelike upgrade selection
+
+### 2.3 Drive Mad 2D (疯狂大脚车)
+- **Engine / Tech:** HTML5 Canvas 2D, Spring Suspension Physics
+- **License:** MIT License
+- **Controls:** Large on-screen touch pedals (forward / backward)
+
+### 2.4 Pixel Racer (像素赛车)
+- **Engine / Tech:** HTML5 Canvas 2D, 3-Lane Highway Traffic
+- **License:** MIT License
+- **Controls:** Large left/right touch buttons
+
+### 2.5 Top-Down F1 (极速F1赛车)
+- **Engine / Tech:** HTML5 Canvas 2D, Circuit Lap Physics
+- **License:** MIT License
+- **Controls:** Left/right steering & throttle touch buttons
+
+### 2.6 Spaceship Shooter (太空小飞机)
+- **Engine / Tech:** HTML5 Canvas 2D, Bullet Hell & Boss Fights
+- **License:** MIT License
+- **Controls:** Smooth touch drag following finger anywhere on screen
+
+### 2.7 Meteor Dodge (躲避陨石)
+- **Engine / Tech:** HTML5 Canvas 2D, Orbital Physics
+- **License:** MIT License
+- **Controls:** Smooth touch drag dodging meteors
+
+### 2.8 Candy Bricks (糖果打砖块)
+- **Engine / Tech:** HTML5 Canvas 2D, Breakout Physics
+- **License:** MIT License
+- **Controls:** Touch drag paddle at bottom of screen
+
+### 2.9 Happy Bee (快乐小蜜蜂)
+- **Engine / Tech:** HTML5 Canvas 2D, Flappy Flight Physics
+- **License:** MIT License
+- **Controls:** One-tap anywhere on screen to flap wings
+
+### 2.10 Happy Snake (贪吃贪玩蛇)
+- **Engine / Tech:** HTML5 Canvas 2D, Grid Snake
+- **License:** MIT License
+- **Controls:** Swipe gestures & on-screen touch D-pad
+
+### 2.11 Animal Match (动物翻翻乐)
+- **Engine / Tech:** HTML5 DOM, Flip Animation
+- **License:** MIT License
+- **Controls:** Touch tap cards to flip
+
+### 2.12 Whack-a-Mole (欢乐打地鼠)
+- **Engine / Tech:** HTML5 Canvas 2D, Reflex Timing
+- **License:** MIT License
+- **Controls:** Fast touch tap on emerging moles
 
 ---
 
-## 3. Classic / Retro Games Suite
-All 12 classic 2D canvas games (Toy Tower Defense, Magic Castle Rogue, Drive Mad 2D, Pixel Racer, Top-Down F1, Spaceship Shooter, Meteor Dodge, Candy Bricks, Happy Bee, Happy Snake, Animal Match, Whack-a-Mole) are original clean implementations licensed under the MIT License, utilizing pure Canvas 2D and Web Audio with zero external dependencies.
+## 3. Core Libraries & Dependencies
+
+- **Three.js (`v0.186.1`):** MIT License (https://github.com/mrdoob/three.js) - Localized in `/shared/three.module.js` with zero remote CDN calls.
+- **Web Audio API:** W3C Standard, procedural synthesis.

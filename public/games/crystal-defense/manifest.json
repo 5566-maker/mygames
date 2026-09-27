@@ -1,9 +1,0 @@
-{
-  "name": "Crystal Defense 3D",
-  "short_name": "CrystalDefense",
-  "start_url": "./",
-  "display": "fullscreen",
-  "orientation": "landscape",
-  "background_color": "#0d1726",
-  "theme_color": "#0d1726"
-}

@@ -1,0 +1,22 @@
+{
+  "id": "game-2048",
+  "title": "2048 Master",
+  "chineseTitle": "经典 2048",
+  "category": "Puzzle & Casual",
+  "orientation": "any",
+  "mobile": true,
+  "desktop": true,
+  "gamepad": false,
+  "fullscreen": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "Arcade Team",
+  "description": "风靡全球的经典数字益智神作！在 iPad 屏幕上下左右平滑划动合并相同数字，一路挑战合并到 2048 乃至更高极限！支持滑动撤回与本地最高分记录。",
+  "controls": {
+    "mobile": "在屏幕上向 上/下/左/右 滑动手势移动方块",
+    "desktop": "键盘方向键或滑动鼠标移动方块",
+    "gamepad": "十字方向键移动"
+  },
+  "tags": ["Touch Native", "Swipe", "Puzzle", "Logic"]
+}

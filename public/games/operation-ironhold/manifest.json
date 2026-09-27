@@ -1,9 +1,0 @@
-{
-  "name": "Operation Ironhold",
-  "short_name": "Ironhold",
-  "start_url": "./",
-  "display": "fullscreen",
-  "orientation": "landscape",
-  "background_color": "#0a0c0e",
-  "theme_color": "#0a0c0e"
-}

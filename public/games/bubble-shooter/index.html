@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>炫彩泡泡龙 - Bubble Shooter</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden; background: #0a0f1d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #FFF;
+    }
+
+    #game-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    }
+
+    /* Top HUD */
+    #hud {
+      position: absolute; top: 60px; left: 24px; right: 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      pointer-events: none; z-index: 10;
+    }
+    .hud-box {
+      background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
+      border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 999px;
+      padding: 8px 20px; color: #FFF; font-size: 16px; font-weight: 800;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 8px;
+    }
+    .hud-val { color: #38BDF8; font-size: 20px; font-weight: 900; }
+
+    /* Overlay */
+    #overlay {
+      position: absolute; inset: 0; background: rgba(10, 15, 29, 0.9);
+      backdrop-filter: blur(14px); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 20; color: #FFF;
+      padding: 24px; text-align: center;
+    }
+    .game-logo {
+      font-size: clamp(36px, 8vw, 64px); font-weight: 900;
+      background: linear-gradient(135deg, #38BDF8, #818CF8, #F472B6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 8px; letter-spacing: 2px;
+    }
+    .game-sub { font-size: 15px; color: #94A3B8; margin-bottom: 32px; font-weight: 600; }
+    .btn-start {
+      padding: 16px 52px; border-radius: 999px;
+      background: linear-gradient(135deg, #38BDF8, #0284C7); border: none;
+      color: #FFF; font-size: 18px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
+    }
+    .hint-bar { margin-top: 24px; font-size: 13px; color: #64748B; }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="hud">
+    <div class="hud-box">
+      <span>🫧 得分:</span><span class="hud-val" id="score-text">0</span>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <h1 class="game-logo" id="overlay-title">炫彩泡泡龙</h1>
+    <p class="game-sub" id="overlay-sub">按住屏幕拖动瞄准虚线，松开发射消除同色泡泡！</p>
+    <button class="btn-start" id="btn-start">开始发射 (PLAY)</button>
+    <p class="hint-bar">👆 iPad 触控专属 · 支持墙面反弹反射折线！</p>
+  </div>
+
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    'use strict';
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const COLORS = ['#EF4444', '#38BDF8', '#10B981', '#FACC15', '#A855F7'];
+    const BUBBLE_R = 20;
+
+    let W, H;
+    let arena = { x: 0, y: 70, w: 0, h: 0 };
+    let grid = []; // rows of bubbles
+    let currentBubble = null;
+    let nextColor = null;
+    let flyingBubble = null;
+    let aimAngle = -Math.PI / 2;
+    let isAiming = false;
+    let score = 0;
+    let isPlaying = false;
+    let particles = [];
+
+    const scoreText = document.getElementById('score-text');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlaySub = document.getElementById('overlay-sub');
+    const btnStart = document.getElementById('btn-start');
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+
+      const maxW = Math.min(W - 20, 480);
+      arena.w = maxW;
+      arena.h = H - arena.y - 120;
+      arena.x = (W - arena.w) / 2;
+    }
+    window.addEventListener('resize', resize);
+
+    function initGrid() {
+      grid = [];
+      const cols = Math.floor(arena.w / (BUBBLE_R * 2));
+      const initialRows = 5;
+
+      for (let r = 0; r < initialRows; r++) {
+        const row = [];
+        const isOffset = r % 2 === 1;
+        const rowCols = isOffset ? cols - 1 : cols;
+        for (let c = 0; c < rowCols; c++) {
+          row.push(COLORS[Math.floor(Math.random() * COLORS.length)]);
+        }
+        grid.push(row);
+      }
+
+      nextColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+      prepareNextBubble();
+    }
+
+    function prepareNextBubble() {
+      currentBubble = {
+        color: nextColor,
+        x: arena.x + arena.w / 2,
+        y: arena.y + arena.h + 50
+      };
+      nextColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+    }
+
+    function shoot() {
+      if (!isPlaying || flyingBubble) return;
+
+      const speed = 18;
+      flyingBubble = {
+        x: currentBubble.x,
+        y: currentBubble.y,
+        vx: Math.cos(aimAngle) * speed,
+        vy: Math.sin(aimAngle) * speed,
+        color: currentBubble.color
+      };
+
+      window.ArcadeSound.playTone(450, 700, 'sine', 0.08, 0.2);
+      prepareNextBubble();
+    }
+
+    function getBubblePos(r, c) {
+      const isOffset = r % 2 === 1;
+      const x = arena.x + BUBBLE_R + (isOffset ? BUBBLE_R : 0) + c * (BUBBLE_R * 2);
+      const y = arena.y + BUBBLE_R + r * (BUBBLE_R * 1.732);
+      return { x, y };
+    }
+
+    function snapToGrid(bx, by, color) {
+      // Find closest empty slot in grid
+      let bestR = 0, bestC = 0, minDist = 99999;
+      const maxRows = Math.floor(arena.h / (BUBBLE_R * 1.732));
+
+      for (let r = 0; r < maxRows; r++) {
+        if (!grid[r]) grid[r] = [];
+        const cols = (r % 2 === 1) ? Math.floor(arena.w / (BUBBLE_R * 2)) - 1 : Math.floor(arena.w / (BUBBLE_R * 2));
+        for (let c = 0; c < cols; c++) {
+          if (!grid[r][c]) {
+            const pos = getBubblePos(r, c);
+            const d = Math.hypot(bx - pos.x, by - pos.y);
+            if (d < minDist) {
+              minDist = d;
+              bestR = r;
+              bestC = c;
+            }
+          }
+        }
+      }
+
+      while (grid.length <= bestR) grid.push([]);
+      grid[bestR][bestC] = color;
+
+      // Pop matching cluster
+      popMatches(bestR, bestC, color);
+      dropFloating();
+
+      // Check bottom breach
+      if (grid.length > maxRows - 2) {
+        gameOver();
+      }
+    }
+
+    function getNeighbors(r, c) {
+      const isOffset = r % 2 === 1;
+      const diffs = isOffset ? [
+        { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+        { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+        { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+      ] : [
+        { dr: -1, dc: -1 }, { dr: -1, dc: 0 },
+        { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+        { dr: 1, dc: -1 }, { dr: 1, dc: 0 }
+      ];
+
+      const res = [];
+      diffs.forEach(d => {
+        const nr = r + d.dr;
+        const nc = c + d.dc;
+        if (nr >= 0 && nr < grid.length && grid[nr] && grid[nr][nc]) {
+          res.push({ r: nr, c: nc });
+        }
+      });
+      return res;
+    }
+
+    function popMatches(startR, startC, targetColor) {
+      const visited = new Set();
+      const matchQueue = [{ r: startR, c: startC }];
+      visited.add(`${startR},${startC}`);
+
+      let idx = 0;
+      while (idx < matchQueue.length) {
+        const cur = matchQueue[idx++];
+        const nbrs = getNeighbors(cur.r, cur.c);
+        nbrs.forEach(n => {
+          const key = `${n.r},${n.c}`;
+          if (!visited.has(key) && grid[n.r][n.c] === targetColor) {
+            visited.add(key);
+            matchQueue.push(n);
+          }
+        });
+      }
+
+      if (matchQueue.length >= 3) {
+        // Pop them!
+        matchQueue.forEach(m => {
+          const pos = getBubblePos(m.r, m.c);
+          spawnPopParticles(pos.x, pos.y, targetColor);
+          grid[m.r][m.c] = null;
+        });
+
+        score += matchQueue.length * 15;
+        scoreText.textContent = score;
+        window.ArcadeSound.playTone(550, 900, 'sine', 0.12, 0.3);
+      } else {
+        window.ArcadeSound.playTone(300, 200, 'triangle', 0.08);
+      }
+    }
+
+    function dropFloating() {
+      // Find connected to roof
+      const connected = new Set();
+      if (grid[0]) {
+        for (let c = 0; c < grid[0].length; c++) {
+          if (grid[0][c]) {
+            connected.add(`0,${c}`);
+            let q = [{ r: 0, c }];
+            let i = 0;
+            while (i < q.length) {
+              const cur = q[i++];
+              getNeighbors(cur.r, cur.c).forEach(n => {
+                const key = `${n.r},${n.c}`;
+                if (!connected.has(key)) {
+                  connected.add(key);
+                  q.push(n);
+                }
+              });
+            }
+          }
+        }
+      }
+
+      // Any bubble not connected falls
+      for (let r = 1; r < grid.length; r++) {
+        if (!grid[r]) continue;
+        for (let c = 0; c < grid[r].length; c++) {
+          if (grid[r][c] && !connected.has(`${r},${c}`)) {
+            const pos = getBubblePos(r, c);
+            spawnPopParticles(pos.x, pos.y, grid[r][c]);
+            grid[r][c] = null;
+            score += 20;
+          }
+        }
+      }
+      scoreText.textContent = score;
+    }
+
+    function spawnPopParticles(x, y, color) {
+      for (let i = 0; i < 16; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = Math.random() * 6 + 2;
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          color,
+          alpha: 1.0,
+          r: Math.random() * 4 + 2
+        });
+      }
+    }
+
+    function gameOver() {
+      isPlaying = false;
+      window.ArcadeSound.playHit();
+      window.KidStorage.saveScore('bubble-shooter', score);
+
+      overlay.style.display = 'flex';
+      overlayTitle.textContent = '游戏结束';
+      overlaySub.textContent = `泡泡消破得分: ${score} 分！`;
+      btnStart.textContent = '再玩一次 (PLAY AGAIN)';
+    }
+
+    function startGame() {
+      score = 0;
+      scoreText.textContent = '0';
+      flyingBubble = null;
+      initGrid();
+      overlay.style.display = 'none';
+      isPlaying = true;
+      window.ArcadeSound.playWin();
+    }
+    btnStart.onclick = startGame;
+
+    // Touch Event Handling
+    function updateAim(clientX, clientY) {
+      const shooterX = arena.x + arena.w / 2;
+      const shooterY = arena.y + arena.h + 50;
+      aimAngle = Math.atan2(clientY - shooterY, clientX - shooterX);
+      // Constrain angle upwards
+      aimAngle = Math.max(-Math.PI + 0.2, Math.min(-0.2, aimAngle));
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!isPlaying) return;
+      isAiming = true;
+      updateAim(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      e.preventDefault();
+      if (isAiming) updateAim(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      e.preventDefault();
+      if (isAiming) {
+        isAiming = false;
+        shoot();
+      }
+    });
+    canvas.addEventListener('pointercancel', () => { isAiming = false; });
+
+    // Loop
+    function loop() {
+      requestAnimationFrame(loop);
+
+      ctx.fillStyle = '#0a0f1d';
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw Arena Borders
+      ctx.save();
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(arena.x, arena.y, arena.w, arena.h + 80);
+      ctx.restore();
+
+      // Draw Grid Bubbles
+      for (let r = 0; r < grid.length; r++) {
+        if (!grid[r]) continue;
+        for (let c = 0; c < grid[r].length; c++) {
+          const color = grid[r][c];
+          if (color) {
+            const pos = getBubblePos(r, c);
+            drawBubble(pos.x, pos.y, color);
+          }
+        }
+      }
+
+      // Draw Aim Trajectory Line
+      if (isAiming && currentBubble) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 3;
+
+        let curX = currentBubble.x;
+        let curY = currentBubble.y;
+        let vx = Math.cos(aimAngle);
+        let vy = Math.sin(aimAngle);
+
+        ctx.beginPath();
+        ctx.moveTo(curX, curY);
+
+        for (let step = 0; step < 500; step += 10) {
+          curX += vx * 10;
+          curY += vy * 10;
+          if (curX - BUBBLE_R < arena.x || curX + BUBBLE_R > arena.x + arena.w) {
+            vx = -vx; // Wall bounce
+          }
+          if (curY < arena.y + 20) break;
+          ctx.lineTo(curX, curY);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw Loaded Bubble at Shooter
+      if (currentBubble) {
+        drawBubble(currentBubble.x, currentBubble.y, currentBubble.color);
+      }
+
+      // Update & Draw Flying Bubble
+      if (flyingBubble) {
+        flyingBubble.x += flyingBubble.vx;
+        flyingBubble.y += flyingBubble.vy;
+
+        // Bounce walls
+        if (flyingBubble.x - BUBBLE_R < arena.x) {
+          flyingBubble.x = arena.x + BUBBLE_R;
+          flyingBubble.vx = -flyingBubble.vx;
+          window.ArcadeSound.playTone(350, 250, 'sine', 0.04);
+        } else if (flyingBubble.x + BUBBLE_R > arena.x + arena.w) {
+          flyingBubble.x = arena.x + arena.w - BUBBLE_R;
+          flyingBubble.vx = -flyingBubble.vx;
+          window.ArcadeSound.playTone(350, 250, 'sine', 0.04);
+        }
+
+        // Check collision with ceiling or other bubbles
+        let collided = false;
+        if (flyingBubble.y - BUBBLE_R <= arena.y) {
+          collided = true;
+        } else {
+          // Check collision with any grid bubble
+          for (let r = 0; r < grid.length; r++) {
+            if (!grid[r]) continue;
+            for (let c = 0; c < grid[r].length; c++) {
+              if (grid[r][c]) {
+                const pos = getBubblePos(r, c);
+                if (Math.hypot(flyingBubble.x - pos.x, flyingBubble.y - pos.y) < BUBBLE_R * 1.8) {
+                  collided = true;
+                  break;
+                }
+              }
+            }
+            if (collided) break;
+          }
+        }
+
+        if (collided) {
+          snapToGrid(flyingBubble.x, flyingBubble.y, flyingBubble.color);
+          flyingBubble = null;
+        } else {
+          drawBubble(flyingBubble.x, flyingBubble.y, flyingBubble.color);
+        }
+      }
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.03;
+        if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    function drawBubble(x, y, color) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, BUBBLE_R, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+
+      // Highlight shine
+      ctx.beginPath();
+      ctx.arc(x - BUBBLE_R * 0.35, y - BUBBLE_R * 0.35, BUBBLE_R * 0.28, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    resize();
+    initGrid();
+    loop();
+  </script>
+</body>
+</html>

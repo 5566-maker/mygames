@@ -8,101 +8,86 @@ const rootDir = path.resolve(__dirname, '..');
 const gamesDir = path.join(rootDir, 'public', 'games');
 
 const covers = [
+  // 8 Brand-new iPad Touch Native Games
   {
-    id: 'apex-formula',
-    title: 'APEX FORMULA',
-    sub: '120Hz HIGH-SPEED F1 RACING',
-    badge: '3D · RACING',
-    icon: '🏎️',
+    id: 'stack-3d',
+    title: 'STACK 3D',
+    sub: 'ONE-TAP 3D TOWER SLICE',
+    badge: '3D · TOUCH',
+    icon: '🏢',
     gradient: ['#0f172a', '#1e1b4b', '#0284c7'],
     accent: '#38bdf8'
   },
   {
-    id: 'turbo-kart-rush',
-    title: 'TURBO KART RUSH',
-    sub: 'DRIFT & ITEM BATTLE 3D',
-    badge: '3D · KART',
-    icon: '🏎️',
-    gradient: ['#1e1b4b', '#4c1d95', '#f59e0b'],
-    accent: '#fbbf24'
-  },
-  {
-    id: 'hexgl',
-    title: 'HexGL',
-    sub: 'ANTI-GRAVITY SCI-FI RACING',
-    badge: '3D · SCI-FI',
-    icon: '🚀',
-    gradient: ['#030712', '#0f172a', '#e11d48'],
-    accent: '#f43f5e'
-  },
-  {
-    id: 'operation-ironhold',
-    title: 'OPERATION IRONHOLD',
-    sub: 'TACTICAL WAREHOUSE FPS',
-    badge: '3D · FPS',
-    icon: '🎯',
-    gradient: ['#0a0c0e', '#1c1917', '#44403c'],
+    id: 'fruit-slice',
+    title: 'FRUIT SLICE',
+    sub: 'MULTI-TOUCH BLADE CUTTER',
+    badge: 'TOUCH · ARCADE',
+    icon: '🍉',
+    gradient: ['#2e1065', '#831843', '#ea580c'],
     accent: '#f59e0b'
   },
   {
-    id: 'dead-signal',
-    title: 'DEAD SIGNAL',
-    sub: 'ZOMBIE EXTRACTION SURVIVAL',
-    badge: '3D · FPS',
-    icon: '☣️',
-    gradient: ['#0b101b', '#18181b', '#84cc16'],
-    accent: '#a3e635'
+    id: 'game-2048',
+    title: '2048 MASTER',
+    sub: 'SILKY SMOOTH SWIPE PUZZLE',
+    badge: 'TOUCH · PUZZLE',
+    icon: '🔢',
+    gradient: ['#0b1120', '#1e293b', '#d97706'],
+    accent: '#facc15'
   },
   {
-    id: 'horror-house',
-    title: 'HORROR HOUSE',
-    sub: '3D FIRST-PERSON HAUNTED ESCAPE',
-    badge: '3D · HORROR',
-    icon: '🕯️',
-    gradient: ['#09090b', '#1c1917', '#7f1d1d'],
-    accent: '#ef4444'
+    id: 'air-hockey',
+    title: 'AIR HOCKEY',
+    sub: 'FAST TABLETOP BATTLE & 2P',
+    badge: 'TOUCH · SPORTS',
+    icon: '🏒',
+    gradient: ['#080c18', '#0f172a', '#0284c7'],
+    accent: '#38bdf8'
   },
   {
-    id: 'neon-runner',
-    title: 'NEON VELOCITY',
-    sub: 'CYBERPUNK SYNTHWAVE RUNNER',
-    badge: '3D · RUNNER',
-    icon: '⚡',
-    gradient: ['#070b19', '#311042', '#06b6d4'],
-    accent: '#22d3ee'
+    id: 'gem-match',
+    title: 'GEM MATCH-3',
+    sub: 'GLOWING JEWEL CASCADE',
+    badge: 'TOUCH · PUZZLE',
+    icon: '💎',
+    gradient: ['#0c0a1d', '#3b0764', '#9333ea'],
+    accent: '#c084fc'
   },
   {
-    id: 'ragdoll-sandbox',
-    title: 'RAGDOLL DEMOLITION',
-    sub: 'REAL-TIME 3D PHYSICS SANDBOX',
-    badge: '3D · PHYSICS',
-    icon: '💣',
-    gradient: ['#0b0f19', '#1e293b', '#6366f1'],
+    id: 'bubble-shooter',
+    title: 'BUBBLE SHOOTER',
+    sub: 'BOUNCE & POP MATCH-3',
+    badge: 'TOUCH · ARCADE',
+    icon: '🫧',
+    gradient: ['#0a0f1d', '#0c4a6e', '#0284c7'],
+    accent: '#38bdf8'
+  },
+  {
+    id: 'piano-tiles',
+    title: 'PIANO TILES',
+    sub: 'MULTI-TOUCH RHYTHM MELODY',
+    badge: 'TOUCH · RHYTHM',
+    icon: '🎹',
+    gradient: ['#080c14', '#1e1b4b', '#4338ca'],
     accent: '#818cf8'
   },
   {
-    id: 'stick-brawler',
-    title: 'STICK & STEEL',
-    sub: 'GLADIATOR COMBAT ARENA 3D',
-    badge: '3D · FIGHTING',
-    icon: '⚔️',
-    gradient: ['#0f0a1c', '#2e1065', '#d97706'],
-    accent: '#f59e0b'
+    id: 'helix-jump',
+    title: 'HELIX JUMP 3D',
+    sub: '3D SPIRAL CYLINDER PLUNGE',
+    badge: '3D · TOUCH',
+    icon: '🌀',
+    gradient: ['#0b101d', '#1e1b4b', '#e11d48'],
+    accent: '#f43f5e'
   },
-  {
-    id: 'crystal-defense',
-    title: 'CRYSTAL DEFENSE',
-    sub: 'TACTICAL 3D TOWER DEFENSE',
-    badge: '3D · STRATEGY',
-    icon: '💎',
-    gradient: ['#0b1320', '#1e1b4b', '#0284c7'],
-    accent: '#38bdf8'
-  },
+
+  // 12 Classic Touch-Friendly Games
   {
     id: 'tower-defense',
     title: 'TOY TOWER DEFENSE',
     sub: 'CLASSIC TOWER DEFENSE',
-    badge: 'RETRO · STRATEGY',
+    badge: 'TOUCH · STRATEGY',
     icon: '🏰',
     gradient: ['#062817', '#064e3b', '#059669'],
     accent: '#10b981'
@@ -111,7 +96,7 @@ const covers = [
     id: 'rogue-defense',
     title: 'MAGIC CASTLE',
     sub: 'ROGUELIKE SPELL DEFENSE',
-    badge: 'RETRO · ROGUE',
+    badge: 'TOUCH · ROGUE',
     icon: '⚡',
     gradient: ['#1c1033', '#4c1d95', '#7c3aed'],
     accent: '#8b5cf6'
@@ -120,7 +105,7 @@ const covers = [
     id: 'drive-mad',
     title: 'DRIVE MAD 2D',
     sub: 'SPRING SUSPENSION TRUCK',
-    badge: 'RETRO · PHYSICS',
+    badge: 'TOUCH · PHYSICS',
     icon: '🚙',
     gradient: ['#0c192c', '#1e3a8a', '#2563eb'],
     accent: '#3b82f6'
@@ -129,7 +114,7 @@ const covers = [
     id: 'pixel-racer',
     title: 'PIXEL RACER',
     sub: 'RETRO 3-LANE DODGER',
-    badge: 'RETRO · RACING',
+    badge: 'TOUCH · RACING',
     icon: '🏎️',
     gradient: ['#2b0d0d', '#7f1d1d', '#dc2626'],
     accent: '#ef4444'
@@ -138,7 +123,7 @@ const covers = [
     id: 'f1-racer',
     title: 'TOP-DOWN F1',
     sub: 'CIRCUIT TIME TRIAL',
-    badge: 'RETRO · RACING',
+    badge: 'TOUCH · RACING',
     icon: '🏁',
     gradient: ['#291804', '#78350f', '#d97706'],
     accent: '#f59e0b'
@@ -147,7 +132,7 @@ const covers = [
     id: 'spaceship',
     title: 'SPACESHIP SHOOTER',
     sub: 'VERTICAL BULLET HELL',
-    badge: 'RETRO · ARCADE',
+    badge: 'TOUCH · ARCADE',
     icon: '✈️',
     gradient: ['#04202c', '#155e75', '#0891b2'],
     accent: '#06b6d4'
@@ -156,7 +141,7 @@ const covers = [
     id: 'meteor',
     title: 'METEOR DODGE',
     sub: 'ORBITAL STAR SURVIVAL',
-    badge: 'RETRO · SURVIVAL',
+    badge: 'TOUCH · SURVIVAL',
     icon: '🚀',
     gradient: ['#29081e', '#831843', '#db2777'],
     accent: '#ec4899'
@@ -165,7 +150,7 @@ const covers = [
     id: 'brick-breaker',
     title: 'CANDY BRICKS',
     sub: 'BOUNCE & BREAKOUT',
-    badge: 'RETRO · ARCADE',
+    badge: 'TOUCH · ARCADE',
     icon: '🧱',
     gradient: ['#2c1504', '#7c2d12', '#ea580c'],
     accent: '#f97316'
@@ -174,7 +159,7 @@ const covers = [
     id: 'sky-hopper',
     title: 'HAPPY BEE',
     sub: 'GENTLE SKY FLIGHT',
-    badge: 'RETRO · CASUAL',
+    badge: 'TOUCH · CASUAL',
     icon: '🐝',
     gradient: ['#2c2404', '#713f12', '#ca8a04'],
     accent: '#eab308'
@@ -183,7 +168,7 @@ const covers = [
     id: 'snake',
     title: 'HAPPY SNAKE',
     sub: 'CLASSIC ARCADE WRAP',
-    badge: 'RETRO · ARCADE',
+    badge: 'TOUCH · ARCADE',
     icon: '🐍',
     gradient: ['#09260d', '#14532d', '#16a34a'],
     accent: '#22c55e'
@@ -192,7 +177,7 @@ const covers = [
     id: 'memory',
     title: 'ANIMAL MATCH',
     sub: 'CARD PAIR PUZZLE',
-    badge: 'RETRO · PUZZLE',
+    badge: 'TOUCH · PUZZLE',
     icon: '🃏',
     gradient: ['#171336', '#312e81', '#4f46e5'],
     accent: '#6366f1'
@@ -201,7 +186,7 @@ const covers = [
     id: 'whack-mole',
     title: 'WHACK-A-MOLE',
     sub: 'SPEED & REFLEXES',
-    badge: 'RETRO · ARCADE',
+    badge: 'TOUCH · ARCADE',
     icon: '🐭',
     gradient: ['#291a04', '#78350f', '#b45309'],
     accent: '#d97706'
@@ -274,7 +259,6 @@ covers.forEach(c => {
     fs.writeFileSync(path.join(dir, 'cover.svg'), coverSvg);
     fs.writeFileSync(path.join(dir, 'hero.svg'), heroSvg);
 
-    // Also write cover.webp / hero.webp as copy or link
     fs.writeFileSync(path.join(dir, 'cover.webp'), coverSvg);
     fs.writeFileSync(path.join(dir, 'hero.webp'), heroSvg);
 

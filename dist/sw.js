@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arcade-v2.0.0';
+const CACHE_NAME = 'arcade-touch-v2.1.0';
 
 const PRECACHE_URLS = [
   '/',

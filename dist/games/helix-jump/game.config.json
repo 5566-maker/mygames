@@ -1,0 +1,22 @@
+{
+  "id": "helix-jump",
+  "title": "Helix Jump 3D",
+  "chineseTitle": "3D 螺旋球",
+  "category": "Casual & 3D",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "gamepad": false,
+  "fullscreen": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "Arcade Team",
+  "description": "风靡全球的 3D 旋转下坠休闲游戏！单指在 iPad 屏幕左右滑动旋转 3D 螺旋柱，控制弹力球穿过圆盘缺口一路极速飞坠，注意避开红色危险区域！",
+  "controls": {
+    "mobile": "在屏幕上左右滑动旋转螺旋立柱",
+    "desktop": "按住鼠标左键左右拖动旋转柱子，或使用 A / D 键",
+    "gamepad": "左摇杆左右旋转"
+  },
+  "tags": ["Three.js", "3D", "Touch Native", "Helix", "Physics"]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "gem-match",
+  "title": "Gem Match-3",
+  "chineseTitle": "宝石消消乐",
+  "category": "Puzzle & Casual",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "gamepad": false,
+  "fullscreen": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "Arcade Team",
+  "description": "iPad 专属闪耀三消益智游戏！滑动或点击相邻璀璨宝石进行三消爆破，连续消除触发全屏魔法连击，挑战 30 步最高得分！",
+  "controls": {
+    "mobile": "点击或划动相邻宝石进行位置交换",
+    "desktop": "鼠标点击或拖拽相邻宝石交换",
+    "gamepad": "触控/鼠标操作"
+  },
+  "tags": ["Touch Native", "Match-3", "Casual", "Gems"]
+}

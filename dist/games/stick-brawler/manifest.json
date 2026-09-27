@@ -1,9 +1,0 @@
-{
-  "name": "Stick & Steel Arena 3D",
-  "short_name": "StickBrawler",
-  "start_url": "./",
-  "display": "fullscreen",
-  "orientation": "landscape",
-  "background_color": "#110e1b",
-  "theme_color": "#110e1b"
-}

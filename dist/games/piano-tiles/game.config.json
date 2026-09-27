@@ -1,0 +1,22 @@
+{
+  "id": "piano-tiles",
+  "title": "Piano Tiles",
+  "chineseTitle": "魔法钢琴块",
+  "category": "Rhythm & Music",
+  "orientation": "portrait",
+  "mobile": true,
+  "desktop": true,
+  "gamepad": false,
+  "fullscreen": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "Arcade Team",
+  "description": "iPad 多点触控音乐节奏游戏！随着经典乐曲旋律，点击下落的黑色琴键演奏动听乐章，千万不要踩到白色琴键！速度随分数逐步提升，极度考验手速反应。",
+  "controls": {
+    "mobile": "多指触控点击下落的黑色琴键",
+    "desktop": "键盘 D / F / J / K 或鼠标点击黑色琴键",
+    "gamepad": "按键对应四列琴键"
+  },
+  "tags": ["Touch Native", "Rhythm", "Music", "Multi-touch"]
+}

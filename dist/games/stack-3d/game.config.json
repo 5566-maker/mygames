@@ -1,0 +1,22 @@
+{
+  "id": "stack-3d",
+  "title": "Stack 3D",
+  "chineseTitle": "3D 叠叠乐",
+  "category": "Casual & 3D",
+  "orientation": "any",
+  "mobile": true,
+  "desktop": true,
+  "gamepad": false,
+  "fullscreen": true,
+  "requiresPointerLock": false,
+  "requiresServer": false,
+  "license": "MIT",
+  "author": "Arcade Team",
+  "description": "极具质感的 3D 建筑几何叠塔游戏。方块在空中来回平移，单指轻触 iPad 屏幕精准切片堆叠，完美重合可触发连击连升音效！",
+  "controls": {
+    "mobile": "轻触屏幕任意位置放置并切除多余方块",
+    "desktop": "鼠标左键点击或按空格键放置方块",
+    "gamepad": "A 键放置方块"
+  },
+  "tags": ["Three.js", "3D", "One-Tap", "Touch Native"]
+}
