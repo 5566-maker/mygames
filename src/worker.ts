@@ -9,6 +9,16 @@ export default {
     // Let Cloudflare Workers Static Assets serve the static files
     const response = await env.ASSETS.fetch(request);
 
+    // Fallback for favicon.ico to svg icon to prevent 404
+    if (url.pathname === "/favicon.ico") {
+      const favRes = await env.ASSETS.fetch(new Request(new URL("/icons/favicon.svg", request.url).toString(), request));
+      if (favRes.status === 200) {
+        const headers = new Headers(favRes.headers);
+        headers.set("Content-Type", "image/svg+xml");
+        return applySecurityHeaders(new Response(favRes.body, { status: 200, headers }));
+      }
+    }
+
     // If 404 and looking for a clean HTML file without .html extension
     if (response.status === 404 && !url.pathname.includes(".")) {
       const cleanUrl = new URL(url);

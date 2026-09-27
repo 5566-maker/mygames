@@ -337,13 +337,44 @@
     }
   };
 
-  document.addEventListener('DOMContentLoaded', () => {
-    window.ArcadeShell = new GameShell();
-    window.KidShell = window.ArcadeShell;
-  });
+  // Immediate safe fallback to prevent race condition before DOMContentLoaded
+  const defaultShell = {
+    isPaused: false,
+    showWin(opts = {}) {
+      Sound.playWin();
+      if (window.ArcadeShell?.showToast) {
+        window.ArcadeShell.showToast(`🏆 恭喜通关！得分：${opts.score || 0}`, 4000);
+      }
+    },
+    showGameOver(opts = {}) {
+      Sound.playHit();
+      if (window.ArcadeShell?.showToast) {
+        window.ArcadeShell.showToast(`💥 游戏结束！得分：${opts.score || 0}`, 4000);
+      }
+    },
+    togglePause() {
+      if (window.ArcadeShell?.togglePause) {
+        window.ArcadeShell.togglePause();
+      } else {
+        this.isPaused = !this.isPaused;
+      }
+    }
+  };
+
+  window.KidShell = defaultShell;
+  window.ArcadeShell = defaultShell;
+
+  function initShell() {
+    if (window._arcadeShellInitialized) return;
+    window._arcadeShellInitialized = true;
+    const shell = new GameShell();
+    window.ArcadeShell = shell;
+    window.KidShell = shell;
+  }
 
   if (document.readyState === 'interactive' || document.readyState === 'complete') {
-    window.ArcadeShell = new GameShell();
-    window.KidShell = window.ArcadeShell;
+    initShell();
+  } else {
+    document.addEventListener('DOMContentLoaded', initShell);
   }
 })();

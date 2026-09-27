@@ -112,7 +112,7 @@
 
     // Tap to build / upgrade tower
     canvas.addEventListener('pointerdown', (e) => {
-      if (isGameOver || window.KidShell.isPaused) return;
+      if (isGameOver || window.KidShell?.isPaused) return;
 
       const rect = canvas.getBoundingClientRect();
       const scaleX = W / rect.width;
@@ -159,7 +159,7 @@
     }
 
     function update() {
-      if (window.KidShell.isPaused || isGameOver) return;
+      if (window.KidShell?.isPaused || isGameOver) return;
 
       for (let s = 0; s < gameSpeed; s++) {
         // Spawn wave enemies
