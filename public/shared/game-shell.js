@@ -73,12 +73,28 @@
     playHit() { this.playTone(180, 60, 'sawtooth', 0.15, 0.2); }
     playCoin() { this.playTone(987.77, 1318.51, 'sine', 0.12, 0.15); }
     playPowerup() { this.playTone(400, 880, 'triangle', 0.25, 0.18); }
+    playLaser() { this.playTone(880, 220, 'sawtooth', 0.12, 0.15); }
+    playBonk() { this.playTone(240, 100, 'square', 0.1, 0.18); }
+    playJump() { this.playTone(200, 450, 'sine', 0.14, 0.15); }
   }
 
   const Sound = new SoundManager();
-  window.ArcadeSound = Sound;
+  const safeSoundProxy = new Proxy(Sound, {
+    get(target, prop) {
+      if (prop in target) {
+        const val = target[prop];
+        return typeof val === 'function' ? val.bind(target) : val;
+      }
+      if (typeof prop === 'string' && prop.startsWith('play')) {
+        return () => target.playTap();
+      }
+      return undefined;
+    }
+  });
+
+  window.ArcadeSound = safeSoundProxy;
   // Legacy aliases
-  window.KidAudio = Sound;
+  window.KidAudio = safeSoundProxy;
 
   // Modern Unified Shell Class
   class GameShell {
