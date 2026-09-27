@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>疯狂大脚车 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #74b9ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 600px;
+      max-height: 850px;
+      object-fit: contain;
+      background: linear-gradient(180deg, #81ecec 0%, #74b9ff 70%, #0984e3 100%);
+    }
+
+    /* Big Pedals for Toddler Fingers */
+    .pedals-bar {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 12px);
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 calc(var(--safe-left) + 20px) 0 calc(var(--safe-right) + 20px);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .pedal-btn {
+      pointer-events: auto;
+      min-width: 100px;
+      height: 72px;
+      border-radius: 36px;
+      border: 4px solid #FFF;
+      font-size: 24px;
+      font-weight: 900;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .pedal-brake {
+      background: linear-gradient(135deg, #ff7675, #d63031);
+    }
+
+    .pedal-gas {
+      background: linear-gradient(135deg, #00b894, #00cec9);
+    }
+
+    .pedal-btn:active {
+      transform: scale(0.92);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <div class="pedals-bar">
+    <button class="pedal-btn pedal-brake" id="btnBrake">◀ 倒车</button>
+    <button class="pedal-btn pedal-gas" id="btnGas">前进 ▶</button>
+  </div>
+
+  <script>
+    window.KID_GAME_ID = 'drive-mad';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 400, H = 600;
+
+    // Monster Truck state with 2D suspension
+    let truck = {
+      x: 100,
+      y: 350,
+      vx: 0,
+      vy: 0,
+      angle: 0,
+      angularVel: 0,
+      wheelR: 20
+    };
+
+    let cameraX = 0;
+    let gasPressed = false;
+    let brakePressed = false;
+    let isGameOver = false;
+
+    // Generate terrain profile (hills, bridges, finish flag)
+    const FINISH_LINE = 2600;
+    function getGroundY(worldX) {
+      if (worldX < 0) return 420;
+      // Gentle rolling hills
+      const h1 = Math.sin(worldX * 0.008) * 45;
+      const h2 = Math.cos(worldX * 0.003) * 30;
+      // Step ramps
+      const bump = (worldX > 700 && worldX < 850) ? -35 : 0;
+      const bump2 = (worldX > 1400 && worldX < 1550) ? -40 : 0;
+      return 420 + h1 + h2 + bump + bump2;
+    }
+
+    function resetGame() {
+      truck = {
+        x: 100,
+        y: 350,
+        vx: 0,
+        vy: 0,
+        angle: 0,
+        angularVel: 0,
+        wheelR: 20
+      };
+      cameraX = 0;
+      isGameOver = false;
+    }
+
+    // Touch controls
+    const btnGas = document.getElementById('btnGas');
+    const btnBrake = document.getElementById('btnBrake');
+
+    function attachPedal(el, onDown, onUp) {
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); onDown(); });
+      el.addEventListener('pointerup', (e) => { e.preventDefault(); onUp(); });
+      el.addEventListener('pointercancel', (e) => { e.preventDefault(); onUp(); });
+    }
+
+    attachPedal(btnGas, () => { gasPressed = true; window.KidAudio.playTap(); }, () => { gasPressed = false; });
+    attachPedal(btnBrake, () => { brakePressed = true; window.KidAudio.playTap(); }, () => { brakePressed = false; });
+
+    // Keyboard support
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'd') gasPressed = true;
+      if (e.key === 'ArrowLeft' || e.key === 'a') brakePressed = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'd') gasPressed = false;
+      if (e.key === 'ArrowLeft' || e.key === 'a') brakePressed = false;
+    });
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver) return;
+
+      // Apply controls
+      if (gasPressed) {
+        truck.vx += 0.28;
+        truck.angularVel += 0.003;
+      }
+      if (brakePressed) {
+        truck.vx -= 0.22;
+        truck.angularVel -= 0.003;
+      }
+
+      // Physics
+      truck.vy += 0.35; // Gravity
+      truck.vx *= 0.98; // Friction
+      truck.angularVel *= 0.95;
+
+      truck.x += truck.vx;
+      truck.y += truck.vy;
+      truck.angle += truck.angularVel;
+
+      // Wheel contact points
+      const wheelBase = 32;
+      const frontX = truck.x + Math.cos(truck.angle) * wheelBase;
+      const frontY = truck.y + Math.sin(truck.angle) * wheelBase + 12;
+      const backX = truck.x - Math.cos(truck.angle) * wheelBase;
+      const backY = truck.y - Math.sin(truck.angle) * wheelBase + 12;
+
+      const groundFront = getGroundY(frontX);
+      const groundBack = getGroundY(backX);
+
+      // Suspension bounce & normal forces
+      if (frontY + truck.wheelR > groundFront) {
+        const penetration = (frontY + truck.wheelR) - groundFront;
+        truck.y -= penetration * 0.5;
+        truck.vy = -truck.vy * 0.25;
+        truck.angularVel -= 0.015;
+      }
+
+      if (backY + truck.wheelR > groundBack) {
+        const penetration = (backY + truck.wheelR) - groundBack;
+        truck.y -= penetration * 0.5;
+        truck.vy = -truck.vy * 0.25;
+        truck.angularVel += 0.015;
+      }
+
+      // Keep truck from staying upside down (toddler auto-recovery!)
+      const targetAngle = Math.atan2(groundFront - groundBack, wheelBase * 2);
+      truck.angle += (targetAngle - truck.angle) * 0.05;
+
+      // Camera smoothly tracks truck
+      cameraX += (truck.x - 120 - cameraX) * 0.1;
+
+      // Check Finish
+      if (truck.x >= FINISH_LINE && !isGameOver) {
+        isGameOver = true;
+        window.KidShell.showWin({
+          score: Math.max(10, Math.floor(1000 - truck.x / 10)),
+          stars: 3,
+          message: '大脚车冲过终点啦！太酷了！',
+          onRestart: resetGame
+        });
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.translate(-cameraX, 0);
+
+      // Draw Ground (hills)
+      ctx.fillStyle = '#2ed573';
+      ctx.beginPath();
+      ctx.moveTo(cameraX - 50, H);
+      for (let x = cameraX - 50; x < cameraX + W + 100; x += 15) {
+        ctx.lineTo(x, getGroundY(x));
+      }
+      ctx.lineTo(cameraX + W + 100, H);
+      ctx.closePath();
+      ctx.fill();
+
+      // Dirt layer under grass
+      ctx.fillStyle = '#57606f';
+      ctx.beginPath();
+      ctx.moveTo(cameraX - 50, H);
+      for (let x = cameraX - 50; x < cameraX + W + 100; x += 15) {
+        ctx.lineTo(x, getGroundY(x) + 12);
+      }
+      ctx.lineTo(cameraX + W + 100, H);
+      ctx.closePath();
+      ctx.fill();
+
+      // Finish Flag
+      ctx.font = '54px sans-serif';
+      ctx.fillText('🏁', FINISH_LINE, getGroundY(FINISH_LINE) - 10);
+
+      // Draw Monster Truck
+      ctx.save();
+      ctx.translate(truck.x, truck.y);
+      ctx.rotate(truck.angle);
+
+      // Truck Body
+      ctx.fillStyle = '#ff4757';
+      ctx.roundRect(-36, -26, 72, 30, 8);
+      ctx.fill();
+
+      // Cabin / Window
+      ctx.fillStyle = '#70a1ff';
+      ctx.roundRect(-10, -42, 38, 20, 6);
+      ctx.fill();
+
+      // Big Wheels
+      ctx.fillStyle = '#2f3542';
+      ctx.beginPath();
+      ctx.arc(-26, 12, truck.wheelR, 0, Math.PI * 2);
+      ctx.arc(26, 12, truck.wheelR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Yellow Rims
+      ctx.fillStyle = '#ffa502';
+      ctx.beginPath();
+      ctx.arc(-26, 12, 8, 0, Math.PI * 2);
+      ctx.arc(26, 12, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      ctx.restore();
+
+      // Progress Bar HUD
+      const progress = Math.min(1, Math.max(0, truck.x / FINISH_LINE));
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.roundRect(14, 56, 372, 32, 16);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffa502';
+      ctx.roundRect(16, 58, 368 * progress, 28, 14);
+      ctx.fill();
+
+      ctx.fillStyle = '#FFF';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`🚙 终点距离: ${Math.floor((1 - progress) * 100)}%`, 200, 72);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>

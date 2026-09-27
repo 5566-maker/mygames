@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="192" height="192">
+  <defs>
+    <linearGradient id="bgGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4FACFE"/>
+      <stop offset="100%" stop-color="#00F2FE"/>
+    </linearGradient>
+    <linearGradient id="cabinetGrad192" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF5252"/>
+      <stop offset="100%" stop-color="#FF1744"/>
+    </linearGradient>
+    <linearGradient id="screenGrad192" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1A237E"/>
+      <stop offset="100%" stop-color="#0D47A1"/>
+    </linearGradient>
+    <linearGradient id="starGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEE58"/>
+      <stop offset="100%" stop-color="#FDD835"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad192)"/>
+  <circle cx="80" cy="110" r="16" fill="#FFFFFF" opacity="0.4"/>
+  <circle cx="430" cy="130" r="22" fill="#FFFFFF" opacity="0.3"/>
+  <path d="M140 100 Q140 70 170 70 L342 70 Q372 70 372 100 L390 280 L400 420 Q400 440 380 440 L132 440 Q112 440 112 420 L122 280 Z" fill="url(#cabinetGrad192)"/>
+  <rect x="160" y="86" width="192" height="48" rx="16" fill="#FFD166"/>
+  <text x="256" y="120" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="26" fill="#D84315" text-anchor="middle">ARCADE</text>
+  <rect x="144" y="152" width="224" height="154" rx="28" fill="#212121"/>
+  <rect x="156" y="164" width="200" height="130" rx="20" fill="url(#screenGrad192)"/>
+  <path d="M256 182 L266 206 L292 208 L272 225 L278 250 L256 236 L234 250 L240 225 L220 208 L246 206 Z" fill="url(#starGrad192)"/>
+  <path d="M116 312 L396 312 L400 376 L112 376 Z" fill="#FFCA28"/>
+  <rect x="178" y="324" width="10" height="28" rx="5" fill="#424242"/>
+  <circle cx="183" cy="324" r="16" fill="#F44336"/>
+  <circle cx="270" cy="342" r="14" fill="#4CAF50"/>
+  <circle cx="310" cy="334" r="14" fill="#2196F3"/>
+  <circle cx="350" cy="346" r="14" fill="#9C27B0"/>
+</svg>

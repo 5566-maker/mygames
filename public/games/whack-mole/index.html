@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>欢乐打地鼠 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+
+    .mole-container {
+      width: 100%;
+      max-width: 440px;
+      padding: 70px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .time-modes {
+      display: flex;
+      gap: 12px;
+    }
+
+    .mode-pill {
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 3px solid #FFF;
+      background: rgba(255, 255, 255, 0.25);
+      color: #FFF;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .mode-pill.active {
+      background: #FFD166;
+      color: #2D3436;
+      border-color: #FFA502;
+    }
+
+    /* Scoreboard */
+    .hud-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 20px;
+      font-weight: 900;
+      color: #FFF;
+    }
+
+    /* 3x3 Mole Holes Grid */
+    .holes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      width: 100%;
+    }
+
+    .hole {
+      aspect-ratio: 1;
+      background: #795548;
+      border-radius: 50%;
+      border: 6px solid #5D4037;
+      box-shadow: inset 0 10px 20px rgba(0,0,0,0.6), 0 8px 16px rgba(0,0,0,0.25);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .mole {
+      position: absolute;
+      bottom: -100%;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 58px;
+      transition: bottom 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .hole.up .mole {
+      bottom: 0;
+    }
+
+    .hole.hit .mole {
+      transform: scale(0.85);
+      filter: brightness(1.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="mole-container">
+    <div class="time-modes">
+      <button class="mode-pill active" id="btn-30s">👶 30秒儿童模式</button>
+      <button class="mode-pill" id="btn-60s">⚡ 60秒挑战模式</button>
+    </div>
+
+    <div class="hud-bar">
+      <div>⏱️ 剩余: <span id="timerText">30</span>s</div>
+      <div>⭐ 得分: <span id="scoreText">0</span></div>
+    </div>
+
+    <div class="holes-grid" id="holesGrid">
+      <div class="hole" data-id="0"><div class="mole">🐹</div></div>
+      <div class="hole" data-id="1"><div class="mole">🐹</div></div>
+      <div class="hole" data-id="2"><div class="mole">🐹</div></div>
+      <div class="hole" data-id="3"><div class="mole">🐹</div></div>
+      <div class="hole" data-id="4"><div class="mole">🐹</div></div>
+      <div class="hole" data-id="5"><div class="mole">🐹</div></div>
+      <div class="hole" data-id="6"><div class="mole">🐹</div></div>
+      <div class="hole" data-id="7"><div class="mole">🐹</div></div>
+      <div class="hole" data-id="8"><div class="mole">🐹</div></div>
+    </div>
+  </div>
+
+  <script>
+    window.KID_GAME_ID = 'whack-mole';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    let duration = 30;
+    let timeLeft = 30;
+    let score = 0;
+    let timerInterval = null;
+    let moleTimeout = null;
+    let lastHole = -1;
+    let isRunning = false;
+
+    const holes = document.querySelectorAll('.hole');
+    const timerText = document.getElementById('timerText');
+    const scoreText = document.getElementById('scoreText');
+    const btn30s = document.getElementById('btn-30s');
+    const btn60s = document.getElementById('btn-60s');
+
+    btn30s.addEventListener('click', () => {
+      duration = 30;
+      btn30s.classList.add('active');
+      btn60s.classList.remove('active');
+      window.KidAudio.playTap();
+      startGame();
+    });
+
+    btn60s.addEventListener('click', () => {
+      duration = 60;
+      btn60s.classList.add('active');
+      btn30s.classList.remove('active');
+      window.KidAudio.playTap();
+      startGame();
+    });
+
+    function randomHole() {
+      let idx = Math.floor(Math.random() * holes.length);
+      while (idx === lastHole) {
+        idx = Math.floor(Math.random() * holes.length);
+      }
+      lastHole = idx;
+      return holes[idx];
+    }
+
+    function popMole() {
+      if (!isRunning || window.KidShell.isPaused) return;
+
+      const hole = randomHole();
+      const mole = hole.querySelector('.mole');
+      const isGolden = Math.random() < 0.2;
+      mole.textContent = isGolden ? '🌟' : '🐹';
+      hole.dataset.golden = isGolden ? '1' : '0';
+
+      hole.classList.add('up');
+      hole.classList.remove('hit');
+
+      const popTime = Math.random() * 500 + 850; // Pop duration friendly for kids
+      moleTimeout = setTimeout(() => {
+        hole.classList.remove('up');
+        if (isRunning) {
+          setTimeout(popMole, Math.random() * 300 + 200);
+        }
+      }, popTime);
+    }
+
+    function handleWhack(hole) {
+      if (!hole.classList.contains('up') || hole.classList.contains('hit')) return;
+
+      hole.classList.add('hit');
+      window.KidAudio.playBonk();
+
+      const isGolden = hole.dataset.golden === '1';
+      score += isGolden ? 3 : 1;
+      scoreText.textContent = score;
+
+      setTimeout(() => {
+        hole.classList.remove('up');
+      }, 150);
+    }
+
+    holes.forEach(hole => {
+      hole.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        handleWhack(hole);
+      });
+    });
+
+    function startGame() {
+      clearInterval(timerInterval);
+      clearTimeout(moleTimeout);
+      holes.forEach(h => h.classList.remove('up', 'hit'));
+
+      score = 0;
+      scoreText.textContent = '0';
+      timeLeft = duration;
+      timerText.textContent = timeLeft;
+      isRunning = true;
+
+      timerInterval = setInterval(() => {
+        if (window.KidShell.isPaused) return;
+        timeLeft--;
+        timerText.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+
+      popMole();
+    }
+
+    function endGame() {
+      isRunning = false;
+      clearInterval(timerInterval);
+      clearTimeout(moleTimeout);
+      holes.forEach(h => h.classList.remove('up'));
+
+      window.KidShell.showWin({
+        score: score * 10,
+        stars: score >= 15 ? 3 : 2,
+        message: `打中了好多小地鼠！抓到了 ${score} 只！`,
+        onRestart: startGame
+      });
+    }
+
+    startGame();
+  </script>
+</body>
+</html>

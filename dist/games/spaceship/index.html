@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>太空小飞机 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 500px;
+      max-height: 850px;
+      object-fit: contain;
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+  <script>
+    window.KID_GAME_ID = 'spaceship';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 360, H = 600;
+    let ship = { x: 180, y: 520, targetX: 180, targetY: 520, r: 20, weapon: 1 };
+    let bullets = [];
+    let enemies = [];
+    let powerups = [];
+    let particles = [];
+    let bgStars = [];
+    let score = 0;
+    let lives = 3;
+    let boss = null;
+    let isGameOver = false;
+    let invulnerableTimer = 0;
+    let shootCooldown = 0;
+
+    for (let i = 0; i < 40; i++) {
+      bgStars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        s: Math.random() * 2 + 1,
+        speed: Math.random() * 1.5 + 0.5
+      });
+    }
+
+    function resetGame() {
+      ship = { x: 180, y: 520, targetX: 180, targetY: 520, r: 20, weapon: 1 };
+      bullets = [];
+      enemies = [];
+      powerups = [];
+      particles = [];
+      score = 0;
+      lives = 3;
+      boss = null;
+      isGameOver = false;
+      invulnerableTimer = 0;
+    }
+
+    function handlePointer(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const scaleX = W / rect.width;
+      const scaleY = H / rect.height;
+
+      ship.targetX = Math.max(20, Math.min(W - 20, (clientX - rect.left) * scaleX));
+      ship.targetY = Math.max(80, Math.min(H - 40, (clientY - rect.top) * scaleY));
+    }
+
+    canvas.addEventListener('pointerdown', handlePointer);
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.buttons > 0) handlePointer(e);
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      handlePointer(e);
+    }, { passive: false });
+
+    function spawnParticles(x, y, color) {
+      for (let i = 0; i < 10; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 5,
+          vy: (Math.random() - 0.5) * 5,
+          r: Math.random() * 4 + 2,
+          color,
+          life: 25
+        });
+      }
+    }
+
+    let spawnTimer = 0;
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver) return;
+
+      ship.x += (ship.targetX - ship.x) * 0.25;
+      ship.y += (ship.targetY - ship.y) * 0.25;
+
+      if (invulnerableTimer > 0) invulnerableTimer--;
+
+      // Background stars
+      bgStars.forEach(s => {
+        s.y += s.speed;
+        if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+      });
+
+      // Auto firing
+      shootCooldown++;
+      if (shootCooldown >= 14) {
+        shootCooldown = 0;
+        window.KidAudio.playLaser();
+        if (ship.weapon === 1) {
+          bullets.push({ x: ship.x, y: ship.y - 20, vx: 0, vy: -9, color: '#38ef7d' });
+        } else {
+          // Triple shot
+          bullets.push({ x: ship.x, y: ship.y - 20, vx: 0, vy: -9, color: '#ffd166' });
+          bullets.push({ x: ship.x - 12, y: ship.y - 16, vx: -2, vy: -9, color: '#ffd166' });
+          bullets.push({ x: ship.x + 12, y: ship.y - 16, vx: 2, vy: -9, color: '#ffd166' });
+        }
+      }
+
+      // Update bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.y < 40) bullets.splice(i, 1);
+      }
+
+      // Spawn normal enemies
+      spawnTimer++;
+      if (!boss && spawnTimer % 60 === 0) {
+        enemies.push({
+          x: Math.random() * (W - 60) + 30,
+          y: -30,
+          r: 18,
+          hp: 2,
+          color: Math.random() < 0.5 ? '#e056fd' : '#f0932b',
+          icon: Math.random() < 0.5 ? '👾' : '🛸'
+        });
+      }
+
+      // Spawn Boss after score >= 400
+      if (!boss && score >= 400 && enemies.length === 0) {
+        boss = {
+          x: W / 2,
+          y: -60,
+          targetY: 140,
+          r: 44,
+          hp: 30,
+          maxHp: 30,
+          vx: 2,
+          icon: '👑'
+        };
+      }
+
+      // Update Boss
+      if (boss) {
+        if (boss.y < boss.targetY) boss.y += 1.5;
+        boss.x += boss.vx;
+        if (boss.x < 50 || boss.x > W - 50) boss.vx = -boss.vx;
+
+        // Bullets hitting Boss
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          const b = bullets[i];
+          const d = Math.hypot(b.x - boss.x, b.y - boss.y);
+          if (d < boss.r) {
+            boss.hp--;
+            bullets.splice(i, 1);
+            spawnParticles(b.x, b.y, '#ffd166');
+            window.KidAudio.playHit();
+
+            if (boss.hp <= 0) {
+              spawnParticles(boss.x, boss.y, '#ff4757');
+              score += 300;
+              boss = null;
+              isGameOver = true;
+              window.KidShell.showWin({
+                score,
+                stars: 3,
+                message: '打赢大Boss啦！拯救了宇宙！',
+                onRestart: resetGame
+              });
+              return;
+            }
+          }
+        }
+      }
+
+      // Update enemies
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        e.y += 2.2;
+
+        // Check bullet hit
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const b = bullets[j];
+          if (Math.hypot(b.x - e.x, b.y - e.y) < e.r + 6) {
+            e.hp--;
+            bullets.splice(j, 1);
+            if (e.hp <= 0) {
+              score += 20;
+              window.KidAudio.playHit();
+              spawnParticles(e.x, e.y, e.color);
+
+              // Chance to drop weapon upgrade
+              if (Math.random() < 0.2) {
+                powerups.push({ x: e.x, y: e.y, icon: '⚡' });
+              }
+
+              enemies.splice(i, 1);
+              break;
+            }
+          }
+        }
+
+        // Check enemy hitting ship
+        if (invulnerableTimer <= 0 && enemies[i]) {
+          if (Math.hypot(e.x - ship.x, e.y - ship.y) < e.r + ship.r) {
+            lives--;
+            invulnerableTimer = 60;
+            window.KidAudio.playHit();
+            enemies.splice(i, 1);
+
+            if (lives <= 0) {
+              isGameOver = true;
+              window.KidShell.showGameOver({
+                score,
+                message: '太空英雄下次一定能通关！',
+                onRestart: resetGame
+              });
+            }
+            continue;
+          }
+        }
+
+        if (e && e.y > H + 40) enemies.splice(i, 1);
+      }
+
+      // Update powerups
+      for (let i = powerups.length - 1; i >= 0; i--) {
+        const p = powerups[i];
+        p.y += 2;
+        if (Math.hypot(p.x - ship.x, p.y - ship.y) < 28) {
+          ship.weapon = 3; // Triple shot
+          window.KidAudio.playPowerup();
+          powerups.splice(i, 1);
+          continue;
+        }
+        if (p.y > H) powerups.splice(i, 1);
+      }
+
+      // Update particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life--;
+        if (pt.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Stars
+      ctx.fillStyle = '#ffffff';
+      bgStars.forEach(s => ctx.fillRect(s.x, s.y, s.s, s.s));
+
+      // Bullets
+      bullets.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Powerups
+      powerups.forEach(p => {
+        ctx.font = '26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.icon, p.x, p.y);
+      });
+
+      // Enemies
+      enemies.forEach(e => {
+        ctx.font = '32px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(e.icon, e.x, e.y);
+      });
+
+      // Boss
+      if (boss) {
+        ctx.save();
+        ctx.font = '68px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(boss.icon, boss.x, boss.y);
+
+        // Boss Health Bar
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(boss.x - 50, boss.y - 48, 100, 8);
+        ctx.fillStyle = '#ff4757';
+        ctx.fillRect(boss.x - 50, boss.y - 48, (boss.hp / boss.maxHp) * 100, 8);
+        ctx.restore();
+      }
+
+      // Particles
+      particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Player Airplane
+      if (invulnerableTimer <= 0 || Math.floor(invulnerableTimer / 6) % 2 === 0) {
+        ctx.font = '44px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('✈️', ship.x, ship.y);
+      }
+
+      // HUD
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.roundRect(14, 56, 332, 40, 20);
+      ctx.fill();
+
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const heartsStr = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, 3 - lives));
+      ctx.fillText(heartsStr, 24, 76);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(`得分: ${score}`, 330, 76);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>

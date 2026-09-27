@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>躲避陨石 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #0f1423;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 500px;
+      max-height: 850px;
+      object-fit: contain;
+      background: radial-gradient(circle at center, #1b263b 0%, #0d1b2a 100%);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+  <script>
+    window.KID_GAME_ID = 'meteor';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 360, H = 600;
+    let ship = { x: 180, y: 500, r: 24, targetX: 180, targetY: 500 };
+    let meteors = [];
+    let starPickups = [];
+    let bgStars = [];
+    let score = 0;
+    let starsEarned = 0;
+    let lives = 3;
+    let isGameOver = false;
+    let invulnerableTimer = 0;
+
+    // Generate starry space background
+    for (let i = 0; i < 40; i++) {
+      bgStars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        s: Math.random() * 2 + 1,
+        speed: Math.random() * 1.5 + 0.5
+      });
+    }
+
+    function resetGame() {
+      ship = { x: 180, y: 500, r: 24, targetX: 180, targetY: 500 };
+      meteors = [];
+      starPickups = [];
+      score = 0;
+      starsEarned = 0;
+      lives = 3;
+      isGameOver = false;
+      invulnerableTimer = 0;
+    }
+
+    // Touch & pointer control: smooth drag to follow finger anywhere on canvas
+    function handlePointer(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const scaleX = W / rect.width;
+      const scaleY = H / rect.height;
+
+      ship.targetX = Math.max(26, Math.min(W - 26, (clientX - rect.left) * scaleX));
+      ship.targetY = Math.max(80, Math.min(H - 40, (clientY - rect.top) * scaleY));
+    }
+
+    canvas.addEventListener('pointerdown', handlePointer);
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.buttons > 0) handlePointer(e);
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      handlePointer(e);
+    }, { passive: false });
+
+    let spawnTimer = 0;
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver) return;
+
+      // Smooth ship interpolation
+      ship.x += (ship.targetX - ship.x) * 0.2;
+      ship.y += (ship.targetY - ship.y) * 0.2;
+
+      score++;
+      if (invulnerableTimer > 0) invulnerableTimer--;
+
+      // Background stars scrolling
+      bgStars.forEach(s => {
+        s.y += s.speed;
+        if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+      });
+
+      // Spawn meteors & stars
+      spawnTimer++;
+      if (spawnTimer % 45 === 0) {
+        meteors.push({
+          x: Math.random() * (W - 60) + 30,
+          y: -40,
+          r: Math.random() * 12 + 16,
+          speed: Math.random() * 2 + 3,
+          rot: 0,
+          rotSpeed: (Math.random() - 0.5) * 0.08
+        });
+      }
+
+      if (spawnTimer % 60 === 0) {
+        starPickups.push({
+          x: Math.random() * (W - 60) + 30,
+          y: -30,
+          r: 18,
+          speed: 2.5
+        });
+      }
+
+      // Update meteors
+      for (let i = meteors.length - 1; i >= 0; i--) {
+        const m = meteors[i];
+        m.y += m.speed;
+        m.rot += m.rotSpeed;
+
+        if (invulnerableTimer <= 0) {
+          const d = Math.hypot(m.x - ship.x, m.y - ship.y);
+          if (d < m.r + ship.r - 6) {
+            lives--;
+            invulnerableTimer = 60;
+            window.KidAudio.playHit();
+            meteors.splice(i, 1);
+
+            if (lives <= 0) {
+              isGameOver = true;
+              window.KidShell.showGameOver({
+                score: Math.floor(score / 10) + starsEarned * 30,
+                message: `太勇敢啦！收集了 ${starsEarned} 颗金色星星！`,
+                onRestart: resetGame
+              });
+            }
+            continue;
+          }
+        }
+
+        if (m.y > H + 50) meteors.splice(i, 1);
+      }
+
+      // Update star pickups
+      for (let i = starPickups.length - 1; i >= 0; i--) {
+        const sp = starPickups[i];
+        sp.y += sp.speed;
+
+        const d = Math.hypot(sp.x - ship.x, sp.y - ship.y);
+        if (d < sp.r + ship.r) {
+          starsEarned++;
+          window.KidAudio.playCoin();
+          starPickups.splice(i, 1);
+          continue;
+        }
+
+        if (sp.y > H + 40) starPickups.splice(i, 1);
+      }
+    }
+
+    function drawRocket(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      if (invulnerableTimer > 0 && Math.floor(invulnerableTimer / 6) % 2 === 0) {
+        ctx.restore();
+        return;
+      }
+
+      // Thruster flame
+      ctx.fillStyle = '#ff9f43';
+      ctx.beginPath();
+      ctx.moveTo(-8, 22);
+      ctx.lineTo(8, 22);
+      ctx.lineTo(0, 34 + Math.random() * 8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Rocket Wings
+      ctx.fillStyle = '#ff5252';
+      ctx.beginPath();
+      ctx.moveTo(-18, 12);
+      ctx.lineTo(-26, 26);
+      ctx.lineTo(-12, 22);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(18, 12);
+      ctx.lineTo(26, 26);
+      ctx.lineTo(12, 22);
+      ctx.closePath();
+      ctx.fill();
+
+      // Rocket Body
+      ctx.fillStyle = '#f1f2f6';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 16, 24, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rocket Nose
+      ctx.fillStyle = '#ff5252';
+      ctx.beginPath();
+      ctx.moveTo(-12, -8);
+      ctx.quadraticCurveTo(0, -28, 12, -8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Window Glass
+      ctx.fillStyle = '#00d2d3';
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-2, -2, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Stars in space
+      ctx.fillStyle = '#ffffff';
+      bgStars.forEach(s => {
+        ctx.fillRect(s.x, s.y, s.s, s.s);
+      });
+
+      // Draw Star Pickups
+      starPickups.forEach(sp => {
+        ctx.save();
+        ctx.translate(sp.x, sp.y);
+        ctx.font = '28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⭐', 0, 0);
+        ctx.restore();
+      });
+
+      // Draw Meteors (cute smiling rocks)
+      meteors.forEach(m => {
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.rotate(m.rot);
+
+        // Meteor body
+        ctx.fillStyle = '#747d8c';
+        ctx.beginPath();
+        ctx.arc(0, 0, m.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Craters
+        ctx.fillStyle = '#57606f';
+        ctx.beginPath();
+        ctx.arc(-m.r * 0.3, -m.r * 0.2, m.r * 0.25, 0, Math.PI * 2);
+        ctx.arc(m.r * 0.3, m.r * 0.3, m.r * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      });
+
+      // Draw Ship
+      drawRocket(ship.x, ship.y);
+
+      // HUD
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.roundRect(14, 56, 332, 40, 20);
+      ctx.fill();
+
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const heartsStr = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, 3 - lives));
+      ctx.fillText(heartsStr, 24, 76);
+
+      ctx.fillText(`⭐ ${starsEarned}`, 160, 76);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(`${Math.floor(score / 10)}`, 330, 76);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>快乐小蜜蜂 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #74b9ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 500px;
+      max-height: 850px;
+      object-fit: contain;
+      background: linear-gradient(180deg, #74b9ff 0%, #a29bfe 100%);
+    }
+
+    .tap-hint {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 20px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.4);
+      color: #FFF;
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 800;
+      pointer-events: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
+  <div class="tap-hint">👆 点击屏幕任何地方让小蜜蜂飞起来！</div>
+
+  <script>
+    window.KID_GAME_ID = 'sky-hopper';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 360, H = 600;
+    let bee = { x: 80, y: 300, vy: 0, r: 18 };
+    let obstacles = [];
+    let honeyStars = [];
+    let score = 0;
+    let lives = 3;
+    let invulnerableTimer = 0;
+    let isGameOver = false;
+
+    const GRAVITY = 0.22; // Low, gentle gravity for kids
+    const FLAP_STRENGTH = -5.2;
+    const CLOUD_GAP = 210; // Extra wide gap for preschoolers!
+
+    function resetGame() {
+      bee = { x: 80, y: 300, vy: 0, r: 18 };
+      obstacles = [];
+      honeyStars = [];
+      score = 0;
+      lives = 3;
+      invulnerableTimer = 0;
+      isGameOver = false;
+    }
+
+    function flap() {
+      if (isGameOver || window.KidShell.isPaused) return;
+      bee.vy = FLAP_STRENGTH;
+      window.KidAudio.playJump();
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+      // Don't flap if clicking header back or sound buttons
+      if (e.target.closest('#arcade-shell-bar') || e.target.closest('#arcade-modal')) return;
+      flap();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.key === 'ArrowUp') flap();
+    });
+
+    let spawnTimer = 0;
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver) return;
+
+      bee.vy += GRAVITY;
+      bee.y += bee.vy;
+
+      if (invulnerableTimer > 0) invulnerableTimer--;
+
+      // Boundary check
+      if (bee.y < 80) { bee.y = 80; bee.vy = 0; }
+      if (bee.y > H - 40) {
+        bee.y = H - 40;
+        bee.vy = FLAP_STRENGTH * 0.8;
+        if (invulnerableTimer <= 0) {
+          lives--;
+          invulnerableTimer = 50;
+          window.KidAudio.playHit();
+          if (lives <= 0) endGame();
+        }
+      }
+
+      // Spawn cloud pillars & stars
+      spawnTimer++;
+      if (spawnTimer % 95 === 0) {
+        const topH = Math.random() * (H - CLOUD_GAP - 200) + 90;
+        obstacles.push({
+          x: W + 20,
+          topH,
+          bottomY: topH + CLOUD_GAP,
+          w: 60,
+          passed: false
+        });
+
+        honeyStars.push({
+          x: W + 50,
+          y: topH + CLOUD_GAP / 2,
+          r: 14
+        });
+      }
+
+      // Update obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.x -= 2.2;
+
+        // Score on passing
+        if (!obs.passed && obs.x + obs.w < bee.x) {
+          obs.passed = true;
+          score += 10;
+          window.KidAudio.playTap();
+        }
+
+        // Collision check
+        if (invulnerableTimer <= 0) {
+          if (bee.x + bee.r > obs.x && bee.x - bee.r < obs.x + obs.w) {
+            if (bee.y - bee.r < obs.topH || bee.y + bee.r > obs.bottomY) {
+              lives--;
+              invulnerableTimer = 60;
+              bee.vy = -3;
+              window.KidAudio.playHit();
+
+              if (lives <= 0) {
+                endGame();
+                return;
+              }
+            }
+          }
+        }
+
+        if (obs.x < -80) obstacles.splice(i, 1);
+      }
+
+      // Update honey stars
+      for (let i = honeyStars.length - 1; i >= 0; i--) {
+        const hs = honeyStars[i];
+        hs.x -= 2.2;
+
+        if (Math.hypot(hs.x - bee.x, hs.y - bee.y) < hs.r + bee.r) {
+          score += 25;
+          window.KidAudio.playCoin();
+          honeyStars.splice(i, 1);
+          continue;
+        }
+
+        if (hs.x < -40) honeyStars.splice(i, 1);
+      }
+    }
+
+    function endGame() {
+      isGameOver = true;
+      window.KidShell.showGameOver({
+        score,
+        message: `小蜜蜂飞了很远！得了 ${score} 分！`,
+        onRestart: resetGame
+      });
+    }
+
+    function drawCloudPillar(x, topH, bottomY, w) {
+      ctx.fillStyle = '#ffffff';
+
+      // Top cloud pillar
+      ctx.roundRect(x, 0, w, topH, [0, 0, 24, 24]);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + w / 2, topH, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bottom cloud pillar
+      ctx.roundRect(x, bottomY, w, H - bottomY, [24, 24, 0, 0]);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + w / 2, bottomY, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Draw Cloud Obstacles
+      obstacles.forEach(obs => drawCloudPillar(obs.x, obs.topH, obs.bottomY, obs.w));
+
+      // Draw Honey Stars
+      honeyStars.forEach(hs => {
+        ctx.font = '26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⭐', hs.x, hs.y);
+      });
+
+      // Draw Bee
+      if (invulnerableTimer <= 0 || Math.floor(invulnerableTimer / 6) % 2 === 0) {
+        ctx.save();
+        ctx.translate(bee.x, bee.y);
+        ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, bee.vy * 0.08)));
+        ctx.font = '38px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🐝', 0, 0);
+        ctx.restore();
+      }
+
+      // HUD
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.roundRect(14, 56, 332, 40, 20);
+      ctx.fill();
+
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const heartsStr = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, 3 - lives));
+      ctx.fillText(heartsStr, 24, 76);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(`得分: ${score}`, 330, 76);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>

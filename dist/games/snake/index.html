@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>贪吃贪玩蛇 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #10ac84;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 480px;
+      max-height: 850px;
+      object-fit: contain;
+      background: #1dd1a1;
+      border-radius: 16px;
+    }
+
+    /* On-Screen D-Pad for Little Kids */
+    .dpad-container {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 16px);
+      left: 50%;
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: repeat(3, 68px);
+      grid-template-rows: repeat(3, 68px);
+      gap: 8px;
+      z-index: 100;
+    }
+
+    .dpad-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 20px;
+      border: 3px solid #FFF;
+      background: rgba(0, 0, 0, 0.35);
+      color: #FFF;
+      font-size: 28px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+    }
+
+    .dpad-btn:active {
+      background: #FFD166;
+      color: #2D3436;
+      transform: scale(0.92);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="360" height="360"></canvas>
+
+  <div class="dpad-container">
+    <div></div>
+    <button class="dpad-btn" id="dpad-up">⬆️</button>
+    <div></div>
+
+    <button class="dpad-btn" id="dpad-left">⬅️</button>
+    <div style="display:flex;align-items:center;justify-content:center;font-size:24px;">🐍</div>
+    <button class="dpad-btn" id="dpad-right">➡️</button>
+
+    <div></div>
+    <button class="dpad-btn" id="dpad-down">⬇️</button>
+    <div></div>
+  </div>
+
+  <script>
+    window.KID_GAME_ID = 'snake';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const GRID_SIZE = 18;
+    const CELL_COUNT = 20; // 20x20 grid = 360px
+    let snake = [
+      { x: 10, y: 10 },
+      { x: 9, y: 10 },
+      { x: 8, y: 10 }
+    ];
+    let dir = { x: 1, y: 0 };
+    let nextDir = { x: 1, y: 0 };
+    let food = { x: 15, y: 10, icon: '🍎' };
+    let score = 0;
+    let lives = 3;
+    let isGameOver = false;
+    let flashTimer = 0;
+
+    const FRUITS = ['🍎', '🍓', '🍌', '🍉', '🍇', '🍊'];
+
+    function spawnFood() {
+      const icon = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+      let fx = Math.floor(Math.random() * CELL_COUNT);
+      let fy = Math.floor(Math.random() * CELL_COUNT);
+      food = { x: fx, y: fy, icon };
+    }
+
+    function resetGame() {
+      snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 }
+      ];
+      dir = { x: 1, y: 0 };
+      nextDir = { x: 1, y: 0 };
+      score = 0;
+      lives = 3;
+      isGameOver = false;
+      flashTimer = 0;
+      spawnFood();
+    }
+
+    function changeDir(nx, ny) {
+      if (nx === -dir.x && ny === -dir.y) return; // Prevent 180 reverse
+      nextDir = { x: nx, y: ny };
+      window.KidAudio.playTap();
+    }
+
+    document.getElementById('dpad-up').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDir(0, -1); });
+    document.getElementById('dpad-down').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDir(0, 1); });
+    document.getElementById('dpad-left').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDir(-1, 0); });
+    document.getElementById('dpad-right').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDir(1, 0); });
+
+    // Keyboard support
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w') changeDir(0, -1);
+      if (e.key === 'ArrowDown' || e.key === 's') changeDir(0, 1);
+      if (e.key === 'ArrowLeft' || e.key === 'a') changeDir(-1, 0);
+      if (e.key === 'ArrowRight' || e.key === 'd') changeDir(1, 0);
+    });
+
+    // Swipe support
+    let touchStartX = 0, touchStartY = 0;
+    canvas.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 25) changeDir(1, 0);
+        else if (dx < -25) changeDir(-1, 0);
+      } else {
+        if (dy > 25) changeDir(0, 1);
+        else if (dy < -25) changeDir(0, -1);
+      }
+    });
+
+    let gameTick = 0;
+    const SPEED_TICKS = 11; // Gentle speed for toddlers
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver) return;
+
+      gameTick++;
+      if (flashTimer > 0) flashTimer--;
+
+      if (gameTick % SPEED_TICKS === 0) {
+        dir = nextDir;
+        let headX = snake[0].x + dir.x;
+        let headY = snake[0].y + dir.y;
+
+        // Wall collision: deduct 1 heart and wrap around safely!
+        if (headX < 0 || headX >= CELL_COUNT || headY < 0 || headY >= CELL_COUNT) {
+          lives--;
+          flashTimer = 8;
+          window.KidAudio.playHit();
+
+          if (lives <= 0) {
+            isGameOver = true;
+            window.KidShell.showGameOver({
+              score,
+              message: `小蛇吃了好多水果！得到了 ${score} 分！`,
+              onRestart: resetGame
+            });
+            return;
+          }
+
+          // Wrap to other side
+          headX = (headX + CELL_COUNT) % CELL_COUNT;
+          headY = (headY + CELL_COUNT) % CELL_COUNT;
+        }
+
+        const newHead = { x: headX, y: headY };
+        snake.unshift(newHead);
+
+        // Check food
+        if (headX === food.x && headY === food.y) {
+          score += 10;
+          window.KidAudio.playCoin();
+          spawnFood();
+        } else {
+          snake.pop();
+        }
+      }
+    }
+
+    function render() {
+      // Checkered garden grass
+      ctx.fillStyle = flashTimer > 0 ? '#ff7675' : '#10ac84';
+      ctx.fillRect(0, 0, 360, 360);
+
+      // Draw food fruit
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(food.icon, food.x * GRID_SIZE + GRID_SIZE / 2, food.y * GRID_SIZE + GRID_SIZE / 2);
+
+      // Draw Snake Body
+      snake.forEach((seg, idx) => {
+        const cx = seg.x * GRID_SIZE + GRID_SIZE / 2;
+        const cy = seg.y * GRID_SIZE + GRID_SIZE / 2;
+
+        if (idx === 0) {
+          // Head: cute green with big eyes
+          ctx.fillStyle = '#f1c40f';
+          ctx.beginPath();
+          ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Eyes
+          ctx.fillStyle = '#FFF';
+          ctx.beginPath();
+          ctx.arc(cx - 3, cy - 3, 3, 0, Math.PI * 2);
+          ctx.arc(cx + 3, cy - 3, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#000';
+          ctx.beginPath();
+          ctx.arc(cx - 3, cy - 3, 1.5, 0, Math.PI * 2);
+          ctx.arc(cx + 3, cy - 3, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#2ecc71';
+          ctx.beginPath();
+          ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // HUD inside canvas top
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.roundRect(8, 8, 344, 28, 14);
+      ctx.fill();
+
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const heartsStr = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, 3 - lives));
+      ctx.fillText(heartsStr, 16, 22);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#FFF';
+      ctx.fillText(`得分: ${score}`, 344, 22);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    spawnFood();
+    render();
+  </script>
+</body>
+</html>

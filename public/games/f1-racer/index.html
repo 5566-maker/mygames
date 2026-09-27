@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>极速F1赛车 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #1e272e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 500px;
+      max-height: 850px;
+      object-fit: contain;
+      background: #2ed573;
+    }
+
+    .steering-bar {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 12px);
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 calc(var(--safe-left) + 20px) 0 calc(var(--safe-right) + 20px);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .steer-btn {
+      pointer-events: auto;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 4px solid #FFF;
+      background: rgba(0, 0, 0, 0.45);
+      font-size: 36px;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+    .steer-btn:active {
+      transform: scale(0.9);
+      background: #FFD166;
+      color: #2D3436;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+  <div class="steering-bar">
+    <button class="steer-btn" id="btnSteerLeft">◀</button>
+    <button class="steer-btn" id="btnSteerRight">▶</button>
+  </div>
+
+  <script>
+    window.KID_GAME_ID = 'f1-racer';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 360, H = 600;
+    let car = { x: 180, y: 480, angle: -Math.PI / 2, speed: 3.5 };
+    let lap = 1;
+    let maxLaps = 3;
+    let isGameOver = false;
+    let lastCheckpoint = -1;
+
+    // Track definition: Oval circuit with rounded corners
+    const CX = 180, CY = 320;
+    const TRACK_R_OUTER_X = 140, TRACK_R_OUTER_Y = 220;
+    const TRACK_R_INNER_X = 70,  TRACK_R_INNER_Y = 150;
+
+    function resetGame() {
+      car = { x: 180, y: 505, angle: 0, speed: 3.5 };
+      lap = 1;
+      isGameOver = false;
+      lastCheckpoint = -1;
+    }
+
+    let turningLeft = false;
+    let turningRight = false;
+
+    function attachBtn(el, onDown, onUp) {
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); onDown(); });
+      el.addEventListener('pointerup', (e) => { e.preventDefault(); onUp(); });
+      el.addEventListener('pointercancel', (e) => { e.preventDefault(); onUp(); });
+    }
+
+    attachBtn(document.getElementById('btnSteerLeft'), () => turningLeft = true, () => turningLeft = false);
+    attachBtn(document.getElementById('btnSteerRight'), () => turningRight = true, () => turningRight = false);
+
+    // Keyboard support
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a') turningLeft = true;
+      if (e.key === 'ArrowRight' || e.key === 'd') turningRight = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a') turningLeft = false;
+      if (e.key === 'ArrowRight' || e.key === 'd') turningRight = false;
+    });
+
+    // Touch dragging on canvas directly steers car towards finger
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.buttons > 0) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        const scaleY = H / rect.height;
+        const tx = (e.clientX - rect.left) * scaleX;
+        const ty = (e.clientY - rect.top) * scaleY;
+        const targetAngle = Math.atan2(ty - car.y, tx - car.x);
+        car.angle += (targetAngle - car.angle) * 0.12;
+      }
+    });
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver) return;
+
+      if (turningLeft) car.angle -= 0.05;
+      if (turningRight) car.angle += 0.05;
+
+      // Check track bounds (oval equation)
+      const dx = (car.x - CX);
+      const dy = (car.y - CY);
+      const outerDist = (dx*dx) / (TRACK_R_OUTER_X*TRACK_R_OUTER_X) + (dy*dy) / (TRACK_R_OUTER_Y*TRACK_R_OUTER_Y);
+      const innerDist = (dx*dx) / (TRACK_R_INNER_X*TRACK_R_INNER_X) + (dy*dy) / (TRACK_R_INNER_Y*TRACK_R_INNER_Y);
+
+      // On grass? Slowdown slightly instead of crashing
+      let currentSpeed = car.speed;
+      if (outerDist > 1 || innerDist < 1) {
+        currentSpeed = car.speed * 0.6; // Soft grass slowdown
+      }
+
+      car.x += Math.cos(car.angle) * currentSpeed;
+      car.y += Math.sin(car.angle) * currentSpeed;
+
+      // Checkpoint & Lap Counting
+      // Checkpoint 1: Top (CY - 180)
+      if (car.y < CY - 150 && lastCheckpoint !== 1) {
+        lastCheckpoint = 1;
+        window.KidAudio.playTap();
+      }
+      // Finish line: Bottom crossing from right to left or vice versa
+      if (car.y > CY + 150 && lastCheckpoint === 1) {
+        lastCheckpoint = 0;
+        lap++;
+        window.KidAudio.playCoin();
+
+        if (lap > maxLaps) {
+          isGameOver = true;
+          window.KidShell.showWin({
+            score: 300,
+            stars: 3,
+            message: '3圈全部跑完啦！F1小冠军！',
+            onRestart: resetGame
+          });
+        }
+      }
+    }
+
+    function render() {
+      // Grass background
+      ctx.fillStyle = '#2ed573';
+      ctx.fillRect(0, 0, W, H);
+
+      // Outer track curb
+      ctx.fillStyle = '#ff4757';
+      ctx.beginPath();
+      ctx.ellipse(CX, CY, TRACK_R_OUTER_X + 8, TRACK_R_OUTER_Y + 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Asphalt Track
+      ctx.fillStyle = '#3d3d3d';
+      ctx.beginPath();
+      ctx.ellipse(CX, CY, TRACK_R_OUTER_X, TRACK_R_OUTER_Y, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner track curb
+      ctx.fillStyle = '#ff4757';
+      ctx.beginPath();
+      ctx.ellipse(CX, CY, TRACK_R_INNER_X, TRACK_R_INNER_Y, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner Infield Grass
+      ctx.fillStyle = '#2ed573';
+      ctx.beginPath();
+      ctx.ellipse(CX, CY, TRACK_R_INNER_X - 8, TRACK_R_INNER_Y - 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Track center dashed line
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([12, 10]);
+      ctx.beginPath();
+      ctx.ellipse(CX, CY, (TRACK_R_OUTER_X + TRACK_R_INNER_X) / 2, (TRACK_R_OUTER_Y + TRACK_R_INNER_Y) / 2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Finish line at bottom
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(CX - 10, CY + TRACK_R_INNER_Y, 20, TRACK_R_OUTER_Y - TRACK_R_INNER_Y);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(CX - 10, CY + TRACK_R_INNER_Y + 10, 10, 10);
+      ctx.fillRect(CX, CY + TRACK_R_INNER_Y + 20, 10, 10);
+      ctx.fillRect(CX - 10, CY + TRACK_R_INNER_Y + 30, 10, 10);
+
+      // Draw F1 Race Car
+      ctx.save();
+      ctx.translate(car.x, car.y);
+      ctx.rotate(car.angle);
+
+      // Tires
+      ctx.fillStyle = '#1e272e';
+      ctx.fillRect(8, -16, 12, 6);
+      ctx.fillRect(8, 10, 12, 6);
+      ctx.fillRect(-16, -16, 14, 7);
+      ctx.fillRect(-16, 9, 14, 7);
+
+      // Front & Rear Wings
+      ctx.fillStyle = '#ffd166';
+      ctx.fillRect(18, -14, 4, 28);
+      ctx.fillRect(-18, -12, 4, 24);
+
+      // Car Body
+      ctx.fillStyle = '#eb2f06';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 20, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Driver Helmet
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-2, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1e272e';
+      ctx.fillRect(0, -3, 3, 6);
+
+      ctx.restore();
+
+      // Top HUD
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.roundRect(14, 56, 332, 40, 20);
+      ctx.fill();
+
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = '#FFF';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`🏁 圈数: ${Math.min(lap, maxLaps)} / ${maxLaps}`, 24, 76);
+
+      ctx.textAlign = 'right';
+      ctx.fillText(`🏎️ F1 赛车`, 330, 76);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    resetGame();
+    render();
+  </script>
+</body>
+</html>

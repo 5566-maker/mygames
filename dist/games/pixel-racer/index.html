@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>像素赛车 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #2d3436;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 500px;
+      max-height: 850px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      background: #2b2b2b;
+    }
+
+    /* On-screen child touch zones */
+    .touch-controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 45%;
+      display: flex;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .touch-half {
+      flex: 1;
+      height: 100%;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      color: rgba(255, 255, 255, 0.22);
+      font-weight: 900;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .touch-half:active {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="320" height="480"></canvas>
+
+  <div class="touch-controls">
+    <div class="touch-half" id="btn-left">◀</div>
+    <div class="touch-half" id="btn-right">▶</div>
+  </div>
+
+  <script>
+    window.KID_GAME_ID = 'pixel-racer';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 320, H = 480;
+    const ROAD_LEFT = 40, ROAD_RIGHT = 280;
+    const LANES = [80, 160, 240];
+
+    let playerX = 160;
+    let targetLane = 1;
+    let speed = 4;
+    let score = 0;
+    let starsCollected = 0;
+    let lives = 3;
+    let roadOffset = 0;
+    let enemies = [];
+    let stars = [];
+    let isGameOver = false;
+    let invulnerableTimer = 0;
+
+    function resetGame() {
+      playerX = 160;
+      targetLane = 1;
+      speed = 3.5;
+      score = 0;
+      starsCollected = 0;
+      lives = 3;
+      roadOffset = 0;
+      enemies = [];
+      stars = [];
+      isGameOver = false;
+      invulnerableTimer = 0;
+    }
+
+    // Touch controls: tap left or right
+    document.getElementById('btn-left').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (targetLane > 0) {
+        targetLane--;
+        window.KidAudio.playTap();
+      }
+    });
+
+    document.getElementById('btn-right').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (targetLane < LANES.length - 1) {
+        targetLane++;
+        window.KidAudio.playTap();
+      }
+    });
+
+    // Keyboard support for desktop
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a') {
+        if (targetLane > 0) { targetLane--; window.KidAudio.playTap(); }
+      } else if (e.key === 'ArrowRight' || e.key === 'd') {
+        if (targetLane < LANES.length - 1) { targetLane++; window.KidAudio.playTap(); }
+      }
+    });
+
+    let spawnEnemyTimer = 0;
+    let spawnStarTimer = 0;
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver) return;
+
+      // Smooth lane movement
+      const targetX = LANES[targetLane];
+      playerX += (targetX - playerX) * 0.22;
+
+      // Road animation
+      roadOffset = (roadOffset + speed) % 40;
+      score += 1;
+
+      if (invulnerableTimer > 0) invulnerableTimer--;
+
+      // Spawn traffic
+      spawnEnemyTimer++;
+      if (spawnEnemyTimer > 75) {
+        spawnEnemyTimer = 0;
+        const lane = Math.floor(Math.random() * 3);
+        const colors = ['#00d2d3', '#5f27cd', '#ff9f43', '#10ac84'];
+        enemies.push({
+          x: LANES[lane],
+          y: -50,
+          w: 28,
+          h: 46,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          speed: speed * 0.55
+        });
+      }
+
+      // Spawn stars
+      spawnStarTimer++;
+      if (spawnStarTimer > 60) {
+        spawnStarTimer = 0;
+        const lane = Math.floor(Math.random() * 3);
+        stars.push({
+          x: LANES[lane],
+          y: -30,
+          r: 12
+        });
+      }
+
+      // Update enemies
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        e.y += speed - e.speed;
+
+        // Collision with player car
+        if (invulnerableTimer <= 0) {
+          if (Math.abs(e.x - playerX) < 26 && Math.abs(e.y - (H - 80)) < 38) {
+            lives--;
+            invulnerableTimer = 60; // 1 second flash
+            window.KidAudio.playHit();
+            enemies.splice(i, 1);
+
+            if (lives <= 0) {
+              isGameOver = true;
+              window.KidShell.showGameOver({
+                score: Math.floor(score / 10) + starsCollected * 50,
+                message: `收集了 ${starsCollected} 颗星星，太棒啦！`,
+                onRestart: resetGame
+              });
+            }
+            continue;
+          }
+        }
+
+        if (e.y > H + 50) enemies.splice(i, 1);
+      }
+
+      // Update stars
+      for (let i = stars.length - 1; i >= 0; i--) {
+        const s = stars[i];
+        s.y += speed;
+
+        // Collect star
+        if (Math.abs(s.x - playerX) < 30 && Math.abs(s.y - (H - 80)) < 36) {
+          starsCollected++;
+          window.KidAudio.playCoin();
+          stars.splice(i, 1);
+          continue;
+        }
+
+        if (s.y > H + 30) stars.splice(i, 1);
+      }
+    }
+
+    function drawPixelCar(x, y, color, isPlayer = false) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Flash when invulnerable
+      if (isPlayer && invulnerableTimer > 0 && Math.floor(invulnerableTimer / 6) % 2 === 0) {
+        ctx.restore();
+        return;
+      }
+
+      // Wheels
+      ctx.fillStyle = '#1e272e';
+      ctx.fillRect(-15, -18, 6, 12);
+      ctx.fillRect(9, -18, 6, 12);
+      ctx.fillRect(-15, 8, 6, 12);
+      ctx.fillRect(9, 8, 6, 12);
+
+      // Car body
+      ctx.fillStyle = color;
+      ctx.fillRect(-12, -22, 24, 44);
+
+      // Windshield
+      ctx.fillStyle = '#dff9fb';
+      ctx.fillRect(-8, -12, 16, 10);
+
+      // Headlights / taillights
+      if (isPlayer) {
+        ctx.fillStyle = '#f9ca24';
+        ctx.fillRect(-10, -22, 5, 3);
+        ctx.fillRect(5, -22, 5, 3);
+      } else {
+        ctx.fillStyle = '#eb4d4b';
+        ctx.fillRect(-10, 20, 5, 3);
+        ctx.fillRect(5, 20, 5, 3);
+      }
+
+      ctx.restore();
+    }
+
+    function render() {
+      // Grass sides
+      ctx.fillStyle = '#2ed573';
+      ctx.fillRect(0, 0, W, H);
+
+      // Road
+      ctx.fillStyle = '#34495e';
+      ctx.fillRect(ROAD_LEFT, 0, ROAD_RIGHT - ROAD_LEFT, H);
+
+      // Road curbs
+      ctx.fillStyle = '#ff4757';
+      ctx.fillRect(ROAD_LEFT - 6, 0, 6, H);
+      ctx.fillRect(ROAD_RIGHT, 0, 6, H);
+
+      // Dashed lane lines
+      ctx.fillStyle = '#ffffff';
+      for (let y = -40 + roadOffset; y < H; y += 40) {
+        ctx.fillRect(120 - 2, y, 4, 20);
+        ctx.fillRect(200 - 2, y, 4, 20);
+      }
+
+      // Draw stars
+      stars.forEach(s => {
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.fillStyle = '#f1c40f';
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⭐', 0, 0);
+        ctx.restore();
+      });
+
+      // Draw enemies
+      enemies.forEach(e => drawPixelCar(e.x, e.y, e.color, false));
+
+      // Draw player car
+      drawPixelCar(playerX, H - 80, '#ff3838', true);
+
+      // HUD: Hearts & Stars & Score
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.roundRect(10, 54, 300, 36, 18);
+      ctx.fill();
+
+      // Hearts
+      ctx.font = '18px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const heartsStr = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, 3 - lives));
+      ctx.fillText(heartsStr, 20, 72);
+
+      // Stars
+      ctx.fillText(`⭐ ${starsCollected}`, 140, 72);
+
+      // Score
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText(`${Math.floor(score / 10)}`, 295, 72);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>

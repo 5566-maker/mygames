@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>魔法城堡 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #0d0d1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 500px;
+      max-height: 850px;
+      object-fit: contain;
+      background: radial-gradient(circle at bottom, #2b1055 0%, #0d0d1a 100%);
+    }
+
+    /* Card Selection Overlay */
+    .card-select-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 10, 25, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .card-select-overlay.active {
+      display: flex;
+    }
+
+    .select-title {
+      font-size: 26px;
+      font-weight: 900;
+      color: #FFD166;
+      margin-bottom: 20px;
+      text-shadow: 0 4px 10px rgba(255, 209, 102, 0.4);
+    }
+
+    .cards-row {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .magic-card {
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      border: 4px solid #FFF;
+      border-radius: 24px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+      transition: transform 0.12s;
+    }
+
+    .magic-card:active {
+      transform: scale(0.95);
+    }
+
+    .card-glyph {
+      font-size: 44px;
+    }
+
+    .card-info h3 {
+      font-size: 20px;
+      font-weight: 900;
+      color: #FFF;
+      margin-bottom: 4px;
+    }
+
+    .card-info p {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+  <div class="card-select-overlay" id="cardOverlay">
+    <div class="select-title">✨ 挑选一个魔法卡片！</div>
+    <div class="cards-row" id="cardsContainer"></div>
+  </div>
+
+  <script>
+    window.KID_GAME_ID = 'rogue-defense';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 360, H = 600;
+    let tower = { x: 180, y: 530, r: 36, hp: 100, maxHp: 100 };
+    let skills = { multishot: 1, freeze: 0, fire: 0, shield: 0 };
+    let projectiles = [];
+    let enemies = [];
+    let particles = [];
+    let wave = 1;
+    let waveKills = 0;
+    let waveTotal = 10;
+    let isGameOver = false;
+    let isUpgrading = false;
+    let shootCooldown = 0;
+
+    const SKILL_POOL = [
+      { id: 'multishot', icon: '⚡', name: '闪电三连发', desc: '城堡炮台发射更多魔法弹' },
+      { id: 'freeze', icon: '❄️', name: '寒冰法术', desc: '小怪物们行动变慢' },
+      { id: 'fire', icon: '🔥', name: '大火球', desc: '更强大的爆炸威力' },
+      { id: 'shield', icon: '🛡️', name: '城堡护盾', desc: '立即恢复城堡 30 点生命' }
+    ];
+
+    function resetGame() {
+      tower.hp = 100;
+      skills = { multishot: 1, freeze: 0, fire: 0, shield: 0 };
+      projectiles = [];
+      enemies = [];
+      particles = [];
+      wave = 1;
+      waveKills = 0;
+      waveTotal = 10;
+      isGameOver = false;
+      isUpgrading = false;
+    }
+
+    function showCardSelect() {
+      isUpgrading = true;
+      const overlay = document.getElementById('cardOverlay');
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = '';
+
+      // Pick 3 random cards
+      const shuffled = [...SKILL_POOL].sort(() => Math.random() - 0.5).slice(0, 3);
+      shuffled.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'magic-card';
+        card.innerHTML = `
+          <div class="card-glyph">${s.icon}</div>
+          <div class="card-info">
+            <h3>${s.name}</h3>
+            <p>${s.desc}</p>
+          </div>
+        `;
+        card.onclick = () => {
+          window.KidAudio.playPowerup();
+          applySkill(s.id);
+          overlay.classList.remove('active');
+          isUpgrading = false;
+          wave++;
+          waveKills = 0;
+          waveTotal = 10 + wave * 3;
+        };
+        container.appendChild(card);
+      });
+
+      overlay.classList.add('active');
+    }
+
+    function applySkill(id) {
+      if (id === 'multishot') skills.multishot++;
+      if (id === 'freeze') skills.freeze++;
+      if (id === 'fire') skills.fire++;
+      if (id === 'shield') tower.hp = Math.min(tower.maxHp, tower.hp + 30);
+    }
+
+    function spawnParticles(x, y, color) {
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 5,
+          vy: (Math.random() - 0.5) * 5,
+          r: Math.random() * 3 + 2,
+          color,
+          life: 20
+        });
+      }
+    }
+
+    let spawnTimer = 0;
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver || isUpgrading) return;
+
+      // Spawn descending enemies
+      spawnTimer++;
+      if (spawnTimer % 45 === 0 && waveKills + enemies.length < waveTotal) {
+        enemies.push({
+          x: Math.random() * (W - 80) + 40,
+          y: -30,
+          r: 18,
+          hp: 4 + wave * 2,
+          maxHp: 4 + wave * 2,
+          speed: Math.max(0.6, 1.3 - skills.freeze * 0.2),
+          icon: Math.random() < 0.5 ? '👾' : '👻'
+        });
+      }
+
+      // Auto Tower Shooting
+      shootCooldown++;
+      if (shootCooldown >= 20 && enemies.length > 0) {
+        shootCooldown = 0;
+        window.KidAudio.playLaser();
+
+        // Target closest enemy
+        let target = enemies[0];
+        let minDist = 9999;
+        enemies.forEach(e => {
+          const d = Math.hypot(e.x - tower.x, e.y - tower.y);
+          if (d < minDist) { minDist = d; target = e; }
+        });
+
+        const count = skills.multishot;
+        for (let i = 0; i < count; i++) {
+          const spread = (i - (count - 1) / 2) * 0.25;
+          const angle = Math.atan2(target.y - tower.y, target.x - tower.x) + spread;
+          projectiles.push({
+            x: tower.x,
+            y: tower.y - 20,
+            vx: Math.cos(angle) * 7,
+            vy: Math.sin(angle) * 7,
+            dmg: 3 + skills.fire * 2
+          });
+        }
+      }
+
+      // Update projectiles
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Check enemy hits
+        for (let j = enemies.length - 1; j >= 0; j--) {
+          const e = enemies[j];
+          if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + 6) {
+            e.hp -= p.dmg;
+            spawnParticles(p.x, p.y, skills.fire > 0 ? '#ff4757' : '#00d2d3');
+            window.KidAudio.playHit();
+            projectiles.splice(i, 1);
+
+            if (e.hp <= 0) {
+              enemies.splice(j, 1);
+              waveKills++;
+              if (waveKills >= waveTotal) {
+                // Wave completed! Card select
+                setTimeout(showCardSelect, 400);
+              }
+            }
+            break;
+          }
+        }
+
+        if (p && (p.y < 0 || p.x < 0 || p.x > W)) projectiles.splice(i, 1);
+      }
+
+      // Update enemies
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        e.y += e.speed;
+
+        // Check if enemy touches castle
+        if (Math.hypot(e.x - tower.x, e.y - tower.y) < e.r + tower.r) {
+          tower.hp -= 15;
+          window.KidAudio.playHit();
+          enemies.splice(i, 1);
+          waveKills++;
+
+          if (tower.hp <= 0) {
+            isGameOver = true;
+            window.KidShell.showGameOver({
+              score: wave * 100,
+              message: `防守到了第 ${wave} 波！已经很厉害了！`,
+              onRestart: resetGame
+            });
+            return;
+          }
+
+          if (waveKills >= waveTotal) {
+            setTimeout(showCardSelect, 400);
+          }
+        }
+      }
+
+      // Update particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life--;
+        if (pt.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Projectiles
+      projectiles.forEach(p => {
+        ctx.fillStyle = skills.fire > 0 ? '#ff6b6b' : '#54a0ff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Enemies
+      enemies.forEach(e => {
+        ctx.font = '32px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(e.icon, e.x, e.y);
+
+        // Health bar
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(e.x - 16, e.y - 20, 32, 5);
+        ctx.fillStyle = '#ff4757';
+        ctx.fillRect(e.x - 16, e.y - 20, (e.hp / e.maxHp) * 32, 5);
+      });
+
+      // Particles
+      particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Magical Castle Tower
+      ctx.font = '54px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🏰', tower.x, tower.y);
+
+      // Castle HP Bar
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.roundRect(tower.x - 50, tower.y + 34, 100, 10, 5);
+      ctx.fill();
+      ctx.fillStyle = tower.hp > 30 ? '#2ed573' : '#ff4757';
+      ctx.roundRect(tower.x - 50, tower.y + 34, (tower.hp / tower.maxHp) * 100, 10, 5);
+      ctx.fill();
+
+      // Top HUD
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.roundRect(14, 56, 332, 40, 20);
+      ctx.fill();
+
+      ctx.font = '18px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#FFF';
+      ctx.fillText(`🏰 生命: ${Math.max(0, tower.hp)}`, 24, 76);
+      ctx.textAlign = 'right';
+      ctx.fillText(`第 ${wave} 波 (${waveKills}/${waveTotal})`, 330, 76);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>

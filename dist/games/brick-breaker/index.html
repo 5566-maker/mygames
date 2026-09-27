@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>糖果打砖块 - 小小游戏厅</title>
+  <link rel="stylesheet" href="../../shared/game-shell.css">
+  <style>
+    body {
+      background: #1e272e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 500px;
+      max-height: 850px;
+      object-fit: contain;
+      background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+  <script>
+    window.KID_GAME_ID = 'brick-breaker';
+  </script>
+  <script src="../../shared/game-shell.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 360, H = 600;
+    let paddle = { x: 180, y: 530, w: 90, h: 16 };
+    let balls = [{ x: 180, y: 500, vx: 3, vy: -4, r: 8 }];
+    let bricks = [];
+    let powerups = [];
+    let particles = [];
+    let score = 0;
+    let safetyNets = 2; // Bottom safety trampoline for kids
+    let lives = 3;
+    let isGameOver = false;
+
+    const COLORS = ['#ff6b81', '#70a1ff', '#2ed573', '#ffa502', '#9b59b6'];
+
+    function initBricks() {
+      bricks = [];
+      const rows = 5;
+      const cols = 6;
+      const bW = 50;
+      const bH = 22;
+      const pad = 6;
+      const offsetTop = 110;
+      const offsetLeft = 15;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          bricks.push({
+            x: offsetLeft + c * (bW + pad),
+            y: offsetTop + r * (bH + pad),
+            w: bW,
+            h: bH,
+            color: COLORS[r % COLORS.length],
+            points: (rows - r) * 10
+          });
+        }
+      }
+    }
+
+    function resetGame() {
+      paddle = { x: 180, y: 530, w: 90, h: 16 };
+      balls = [{ x: 180, y: 500, vx: 3, vy: -4, r: 8 }];
+      powerups = [];
+      particles = [];
+      score = 0;
+      safetyNets = 2;
+      lives = 3;
+      isGameOver = false;
+      initBricks();
+    }
+
+    initBricks();
+
+    // Finger touch tracking paddle
+    function movePaddle(clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      paddle.x = Math.max(paddle.w / 2, Math.min(W - paddle.w / 2, (clientX - rect.left) * scaleX));
+    }
+
+    canvas.addEventListener('pointermove', (e) => {
+      movePaddle(e.clientX);
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      movePaddle(e.touches[0].clientX);
+    }, { passive: false });
+
+    function spawnParticles(x, y, color) {
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4,
+          r: Math.random() * 3 + 2,
+          color,
+          life: 20
+        });
+      }
+    }
+
+    function update() {
+      if (window.KidShell.isPaused || isGameOver) return;
+
+      // Update balls
+      for (let bIndex = balls.length - 1; bIndex >= 0; bIndex--) {
+        const b = balls[bIndex];
+        b.x += b.vx;
+        b.y += b.vy;
+
+        // Wall collisions
+        if (b.x - b.r < 0) { b.x = b.r; b.vx = -b.vx; window.KidAudio.playTap(); }
+        if (b.x + b.r > W) { b.x = W - b.r; b.vx = -b.vx; window.KidAudio.playTap(); }
+        if (b.y - b.r < 80) { b.y = 80 + b.r; b.vy = -b.vy; window.KidAudio.playTap(); }
+
+        // Paddle collision
+        if (b.y + b.r >= paddle.y && b.y - b.r <= paddle.y + paddle.h) {
+          if (b.x >= paddle.x - paddle.w / 2 && b.x <= paddle.x + paddle.w / 2) {
+            b.vy = -Math.abs(b.vy);
+            // Angled bounce based on where it hits paddle
+            const hitOffset = (b.x - paddle.x) / (paddle.w / 2);
+            b.vx = hitOffset * 4.5;
+            window.KidAudio.playBonk();
+          }
+        }
+
+        // Brick collisions
+        for (let i = bricks.length - 1; i >= 0; i--) {
+          const br = bricks[i];
+          if (b.x + b.r > br.x && b.x - b.r < br.x + br.w &&
+              b.y + b.r > br.y && b.y - b.r < br.y + br.h) {
+            b.vy = -b.vy;
+            score += br.points;
+            window.KidAudio.playCoin();
+            spawnParticles(br.x + br.w / 2, br.y + br.h / 2, br.color);
+
+            // Chance to drop powerup
+            if (Math.random() < 0.25) {
+              powerups.push({
+                x: br.x + br.w / 2,
+                y: br.y + br.h / 2,
+                type: Math.random() < 0.5 ? 'wide' : 'multiball'
+              });
+            }
+
+            bricks.splice(i, 1);
+            break;
+          }
+        }
+
+        // Check if ball falls past bottom
+        if (b.y > H + 10) {
+          if (safetyNets > 0) {
+            // Safety trampoline rescues the ball!
+            safetyNets--;
+            b.y = H - 20;
+            b.vy = -Math.abs(b.vy);
+            window.KidAudio.playJump();
+          } else {
+            balls.splice(bIndex, 1);
+          }
+        }
+      }
+
+      // Check win
+      if (bricks.length === 0) {
+        isGameOver = true;
+        window.KidShell.showWin({
+          score: score + lives * 100,
+          stars: 3,
+          message: '全打碎啦！太棒了！',
+          onRestart: resetGame
+        });
+        return;
+      }
+
+      // If all balls lost
+      if (balls.length === 0) {
+        lives--;
+        window.KidAudio.playHit();
+        if (lives <= 0) {
+          isGameOver = true;
+          window.KidShell.showGameOver({
+            score,
+            message: '差一点点就通关了！',
+            onRestart: resetGame
+          });
+        } else {
+          balls.push({ x: paddle.x, y: paddle.y - 20, vx: 3, vy: -4, r: 8 });
+          safetyNets = 1;
+        }
+      }
+
+      // Update powerups
+      for (let i = powerups.length - 1; i >= 0; i--) {
+        const p = powerups[i];
+        p.y += 2.5;
+
+        if (p.y > paddle.y - 10 && p.y < paddle.y + paddle.h + 10 &&
+            p.x > paddle.x - paddle.w / 2 && p.x < paddle.x + paddle.w / 2) {
+          window.KidAudio.playPowerup();
+          if (p.type === 'wide') {
+            paddle.w = Math.min(150, paddle.w + 25);
+          } else if (p.type === 'multiball') {
+            if (balls.length < 3) {
+              balls.push({ x: paddle.x, y: paddle.y - 20, vx: -3, vy: -4, r: 8 });
+            }
+          }
+          powerups.splice(i, 1);
+          continue;
+        }
+
+        if (p.y > H) powerups.splice(i, 1);
+      }
+
+      // Update particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const part = particles[i];
+        part.x += part.vx;
+        part.y += part.vy;
+        part.life--;
+        if (part.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Draw Safety Net Trampoline at bottom if active
+      if (safetyNets > 0) {
+        ctx.strokeStyle = '#00d2d3';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(0, H - 8);
+        ctx.lineTo(W, H - 8);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = '#00d2d3';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🛡️ 安全弹簧网 x${safetyNets}`, W / 2, H - 14);
+      }
+
+      // Draw Bricks
+      bricks.forEach(br => {
+        ctx.fillStyle = br.color;
+        ctx.roundRect(br.x, br.y, br.w, br.h, 6);
+        ctx.fill();
+        // Highlight shine
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(br.x + 4, br.y + 3, br.w - 8, 4);
+      });
+
+      // Draw Particles
+      particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw Powerups
+      powerups.forEach(p => {
+        ctx.font = '22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.type === 'wide' ? '⭐' : '🍬', p.x, p.y);
+      });
+
+      // Draw Paddle
+      ctx.fillStyle = '#ff4757';
+      ctx.roundRect(paddle.x - paddle.w / 2, paddle.y, paddle.w, paddle.h, 8);
+      ctx.fill();
+      ctx.fillStyle = '#ffa502';
+      ctx.roundRect(paddle.x - paddle.w / 2 + 4, paddle.y + 2, paddle.w - 8, 4, 2);
+      ctx.fill();
+
+      // Draw Balls
+      balls.forEach(b => {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // HUD
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.roundRect(14, 56, 332, 40, 20);
+      ctx.fill();
+
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const heartsStr = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, 3 - lives));
+      ctx.fillText(heartsStr, 24, 76);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(`得分: ${score}`, 330, 76);
+
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>

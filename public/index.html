@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>小小游戏厅 - Kids Arcade (4~6岁幼儿安全无广告小游戏)</title>
+  
+  <!-- PWA & Mobile Meta -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#FFD166">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="小小游戏厅">
+  <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg">
+  <link rel="apple-touch-icon" href="./icons/icon-192.svg">
+
+  <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 16px);
+      --safe-bottom: env(safe-area-inset-bottom, 16px);
+      --safe-left: env(safe-area-inset-left, 16px);
+      --safe-right: env(safe-area-inset-right, 16px);
+      --c-yellow: #FFD166;
+      --c-red: #FF5252;
+      --c-blue: #4FACFE;
+      --c-green: #06D6A0;
+      --c-purple: #9B51E0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background: linear-gradient(180deg, #192a56 0%, #0c2461 50%, #0a192f 100%);
+      color: #FFF;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      touch-action: manipulation;
+    }
+
+    /* Ambient background bubbles */
+    .bg-bubble {
+      position: fixed;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: floatBubble 8s infinite alternate ease-in-out;
+    }
+    @keyframes floatBubble {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(-30px) scale(1.08); }
+    }
+
+    /* Header Bar */
+    header {
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: calc(var(--safe-top) + 8px);
+      padding-bottom: 12px;
+      padding-left: calc(var(--safe-left) + 16px);
+      padding-right: calc(var(--safe-right) + 16px);
+      background: rgba(12, 36, 97, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 3px solid rgba(255, 209, 102, 0.3);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      font-size: 34px;
+      animation: bounceStar 2s infinite ease-in-out;
+      filter: drop-shadow(0 4px 8px rgba(255, 209, 102, 0.5));
+    }
+    @keyframes bounceStar {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-6px) rotate(8deg); }
+    }
+
+    .brand-title {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #FFD166, #FF9F43);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 10px rgba(255, 209, 102, 0.3);
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 800;
+      color: #A4B0BE;
+      letter-spacing: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hdr-btn {
+      min-width: 44px;
+      min-height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.15);
+      color: #FFF;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      transition: transform 0.15s, background-color 0.2s;
+    }
+    .hdr-btn:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Parent Gate Gear Button */
+    .parent-btn {
+      position: relative;
+    }
+    .parent-progress-ring {
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      width: 50px;
+      height: 50px;
+      pointer-events: none;
+      transform: rotate(-90deg);
+    }
+    .parent-progress-ring circle {
+      fill: none;
+      stroke: #FFD166;
+      stroke-width: 4;
+      stroke-dasharray: 125.6;
+      stroke-dashoffset: 125.6;
+      transition: stroke-dashoffset 0.05s linear;
+    }
+
+    /* Main Container */
+    main {
+      position: relative;
+      z-index: 10;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 18px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 32px) calc(var(--safe-left) + 16px);
+    }
+
+    /* Arcade Grid Responsive:
+       iPhone: 2 cols
+       iPad: 3~4 cols
+       Desktop: 4~6 cols
+    */
+    .arcade-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media (min-width: 600px) {
+      .arcade-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+    }
+
+    @media (min-width: 900px) {
+      .arcade-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 22px;
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .arcade-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 22px;
+      }
+    }
+
+    /* Game Card */
+    .game-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      padding: 16px 12px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      color: #FFF;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+      transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.14s, border-color 0.2s;
+      overflow: hidden;
+    }
+
+    .game-card:active {
+      transform: scale(0.94);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .game-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 45%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 100%);
+      border-radius: 26px 26px 0 0;
+      pointer-events: none;
+    }
+
+    /* Card Themes */
+    .theme-td       { background: linear-gradient(135deg, #1e3c72, #2a5298); border-color: #54a0ff; }
+    .theme-rogue    { background: linear-gradient(135deg, #4a148c, #7b1fa2); border-color: #d279ee; }
+    .theme-drive    { background: linear-gradient(135deg, #e65100, #ff9800); border-color: #ffd166; }
+    .theme-pixel    { background: linear-gradient(135deg, #b71540, #eb2f06); border-color: #ff6b81; }
+    .theme-f1       { background: linear-gradient(135deg, #0c2461, #1e3799); border-color: #4a69bd; }
+    .theme-space    { background: linear-gradient(135deg, #2c2c54, #474787); border-color: #706fd3; }
+    .theme-meteor   { background: linear-gradient(135deg, #222f3e, #576574); border-color: #ff9f43; }
+    .theme-brick    { background: linear-gradient(135deg, #006266, #1289A7); border-color: #12CBC4; }
+    .theme-sky      { background: linear-gradient(135deg, #009432, #A3CB38); border-color: #C4E538; }
+    .theme-snake    { background: linear-gradient(135deg, #009975, #10ac84); border-color: #1dd1a1; }
+    .theme-memory   { background: linear-gradient(135deg, #833471, #B53471); border-color: #FDA7DF; }
+    .theme-mole     { background: linear-gradient(135deg, #6F1E51, #833471); border-color: #ED4C67; }
+
+    .card-icon {
+      font-size: 60px;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .game-card:active .card-icon {
+      transform: scale(1.15) rotate(-6deg);
+    }
+
+    .card-name {
+      font-size: 20px;
+      font-weight: 900;
+      color: #FFF;
+      text-align: center;
+      margin-bottom: 2px;
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    .card-badge {
+      margin-top: 8px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.28);
+      font-size: 12px;
+      font-weight: 800;
+      color: #FFD166;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Long-press toast */
+    #parent-toast {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 24px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 20, 35, 0.95);
+      color: #FFD166;
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      border: 2px solid #FFD166;
+      display: none;
+      z-index: 1000;
+    }
+
+    /* Parent Gate Modal */
+    .parent-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 15, 30, 0.85);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    .parent-modal.active {
+      display: flex;
+    }
+
+    .parent-dialog {
+      background: #1E272E;
+      color: #FFF;
+      border-radius: 28px;
+      border: 4px solid #FFD166;
+      max-width: 520px;
+      width: 95%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .parent-dialog h2 {
+      font-size: 24px;
+      color: #FFD166;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .parent-section {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin: 16px 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .parent-section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #00D2D3;
+      margin-bottom: 12px;
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .switch-toggle {
+      width: 52px;
+      height: 30px;
+      background: #576574;
+      border-radius: 999px;
+      position: relative;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .switch-toggle.active {
+      background: #10AC84;
+    }
+    .switch-toggle::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background: #FFF;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .switch-toggle.active::after {
+      transform: translateX(22px);
+    }
+
+    .parent-btn-action {
+      width: 100%;
+      height: 48px;
+      border-radius: 14px;
+      background: #FF5252;
+      border: none;
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .parent-btn-close {
+      width: 100%;
+      height: 50px;
+      border-radius: 999px;
+      background: #FFD166;
+      color: #2D3436;
+      border: none;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+      margin-top: 18px;
+    }
+
+    .license-box {
+      font-size: 12px;
+      color: #C8D6E5;
+      line-height: 1.6;
+      max-height: 140px;
+      overflow-y: auto;
+      background: #111425;
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Background Bubbles -->
+  <div class="bg-bubble" style="top:10%; left:5%; width:200px; height:200px;"></div>
+  <div class="bg-bubble" style="top:60%; right:5%; width:280px; height:280px; animation-delay:-3s;"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⭐</div>
+      <div>
+        <h1 class="brand-title">小小游戏厅</h1>
+        <div class="brand-sub">KIDS ARCADE</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <!-- Sound toggle -->
+      <button class="hdr-btn" id="hall-sound-btn" aria-label="声音开关">🔊</button>
+      
+      <!-- Parent Gear with 2s Long Press Protection -->
+      <button class="hdr-btn parent-btn" id="parent-gear-btn" aria-label="家长设置 (长按2秒进入)">
+        ⚙️
+        <svg class="parent-progress-ring">
+          <circle id="parent-ring-circle" cx="25" cy="25" r="20"></circle>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Arcade Main Grid -->
+  <main>
+    <div class="arcade-grid" id="arcade-grid">
+      
+      <!-- 1. 普通塔防 -->
+      <a href="./games/tower-defense/index.html" class="game-card theme-td" data-game="tower-defense">
+        <div class="card-icon">🏰</div>
+        <div class="card-name">玩具塔防</div>
+        <div class="card-sub">タワーディフェンス</div>
+        <div class="card-badge" id="badge-tower-defense">⭐ 0</div>
+      </a>
+
+      <!-- 2. 肉鸽塔防 -->
+      <a href="./games/rogue-defense/index.html" class="game-card theme-rogue" data-game="rogue-defense">
+        <div class="card-icon">⚡</div>
+        <div class="card-name">魔法城堡</div>
+        <div class="card-sub">マジックディフェンス</div>
+        <div class="card-badge" id="badge-rogue-defense">⭐ 0</div>
+      </a>
+
+      <!-- 3. Drive Mad 风格赛车 -->
+      <a href="./games/drive-mad/index.html" class="game-card theme-drive" data-game="drive-mad">
+        <div class="card-icon">🚙</div>
+        <div class="card-name">疯狂大脚车</div>
+        <div class="card-sub">モンスタートラック</div>
+        <div class="card-badge" id="badge-drive-mad">⭐ 0</div>
+      </a>
+
+      <!-- 4. 像素赛车 -->
+      <a href="./games/pixel-racer/index.html" class="game-card theme-pixel" data-game="pixel-racer">
+        <div class="card-icon">🏎️</div>
+        <div class="card-name">像素赛车</div>
+        <div class="card-sub">ピクセルレーサー</div>
+        <div class="card-badge" id="badge-pixel-racer">⭐ 0</div>
+      </a>
+
+      <!-- 5. F1 Racing -->
+      <a href="./games/f1-racer/index.html" class="game-card theme-f1" data-game="f1-racer">
+        <div class="card-icon">🏁</div>
+        <div class="card-name">极速F1赛车</div>
+        <div class="card-sub">レーシングカー</div>
+        <div class="card-badge" id="badge-f1-racer">⭐ 0</div>
+      </a>
+
+      <!-- 6. Spaceship Shooter -->
+      <a href="./games/spaceship/index.html" class="game-card theme-space" data-game="spaceship">
+        <div class="card-icon">✈️</div>
+        <div class="card-name">太空小飞机</div>
+        <div class="card-sub">スペースシューター</div>
+        <div class="card-badge" id="badge-spaceship">⭐ 0</div>
+      </a>
+
+      <!-- 7. Meteor Dodge -->
+      <a href="./games/meteor/index.html" class="game-card theme-meteor" data-game="meteor">
+        <div class="card-icon">🚀</div>
+        <div class="card-name">躲避陨石</div>
+        <div class="card-sub">メテオダッジ</div>
+        <div class="card-badge" id="badge-meteor">⭐ 0</div>
+      </a>
+
+      <!-- 8. Brick Breaker -->
+      <a href="./games/brick-breaker/index.html" class="game-card theme-brick" data-game="brick-breaker">
+        <div class="card-icon">🧱</div>
+        <div class="card-name">糖果打砖块</div>
+        <div class="card-sub">ブロック崩し</div>
+        <div class="card-badge" id="badge-brick-breaker">⭐ 0</div>
+      </a>
+
+      <!-- 9. Flappy 类游戏 (原创快乐小蜜蜂) -->
+      <a href="./games/sky-hopper/index.html" class="game-card theme-sky" data-game="sky-hopper">
+        <div class="card-icon">🐝</div>
+        <div class="card-name">快乐小蜜蜂</div>
+        <div class="card-sub">スカイホッパー</div>
+        <div class="card-badge" id="badge-sky-hopper">⭐ 0</div>
+      </a>
+
+      <!-- 10. Snake (贪吃蛇儿童版) -->
+      <a href="./games/snake/index.html" class="game-card theme-snake" data-game="snake">
+        <div class="card-icon">🐍</div>
+        <div class="card-name">贪吃贪玩蛇</div>
+        <div class="card-sub">スネークゲーム</div>
+        <div class="card-badge" id="badge-snake">⭐ 0</div>
+      </a>
+
+      <!-- 11. Memory Match (动物翻翻乐) -->
+      <a href="./games/memory/index.html" class="game-card theme-memory" data-game="memory">
+        <div class="card-icon">🃏</div>
+        <div class="card-name">动物翻翻乐</div>
+        <div class="card-sub">えあわせカード</div>
+        <div class="card-badge" id="badge-memory">⭐ 0</div>
+      </a>
+
+      <!-- 12. Whack-a-Mole (欢乐打地鼠) -->
+      <a href="./games/whack-mole/index.html" class="game-card theme-mole" data-game="whack-mole">
+        <div class="card-icon">🐭</div>
+        <div class="card-name">欢乐打地鼠</div>
+        <div class="card-sub">もぐらたたき</div>
+        <div class="card-badge" id="badge-whack-mole">⭐ 0</div>
+      </a>
+
+    </div>
+  </main>
+
+  <div id="parent-toast">请按住齿轮 2 秒进入家长设置</div>
+
+  <!-- Parent Setting Modal (Long-press 2s triggered) -->
+  <div class="parent-modal" id="parent-modal">
+    <div class="parent-dialog">
+      <h2><span>⚙️</span><span>家长控制中心</span></h2>
+      <p style="font-size:13px; color:#A4B0BE; margin-bottom:14px;">此设置针对家长防沉迷与游戏管理，所有数据保存在本地。</p>
+
+      <div class="parent-section">
+        <div class="parent-section-title">🔊 音效设置</div>
+        <div class="switch-row">
+          <span>全局游戏音效</span>
+          <div class="switch-toggle active" id="parent-sound-toggle"></div>
+        </div>
+      </div>
+
+      <div class="parent-section">
+        <div class="parent-section-title">🎮 游戏显示管理</div>
+        <div id="game-visibility-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <div class="parent-section">
+        <div class="parent-section-title">🔄 进度管理</div>
+        <p style="font-size:13px; color:#A4B0BE;">重置所有游戏的最高分与获得的星星：</p>
+        <button class="parent-btn-action" id="btn-reset-scores">清空所有游戏记录</button>
+      </div>
+
+      <div class="parent-section">
+        <div class="parent-section-title">📄 版本与开源许可</div>
+        <p style="font-size:12px; color:#A4B0BE; margin-bottom:6px;">版本号：v1.0.0 (Cloudflare Workers Static)</p>
+        <div class="license-box">
+          本项目所有 12 款小游戏均采用 MIT 兼容许可证或原创独立实现。严格剔除广告网络、追踪探针 (Zero Tracker)、第三方外链 CDN。所有资源均支持 Service Worker 离线安全游玩。
+        </div>
+      </div>
+
+      <button class="parent-btn-close" id="btn-close-parent">完成并保存</button>
+    </div>
+  </div>
+
+  <script src="./shared/game-shell.js"></script>
+  <script>
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    // Load Badges (Stars)
+    const games = [
+      'tower-defense', 'rogue-defense', 'drive-mad', 'pixel-racer',
+      'f1-racer', 'spaceship', 'meteor', 'brick-breaker',
+      'sky-hopper', 'snake', 'memory', 'whack-mole'
+    ];
+
+    function updateBadges() {
+      games.forEach(g => {
+        const badge = document.getElementById(`badge-${g}`);
+        if (badge && window.KidStorage) {
+          const stars = window.KidStorage.getStars(g);
+          const score = window.KidStorage.getScore(g);
+          badge.textContent = `⭐ ${stars || 0}  🏆 ${score || 0}`;
+        }
+      });
+    }
+
+    updateBadges();
+
+    // Sound button in header
+    const hallSoundBtn = document.getElementById('hall-sound-btn');
+    function refreshSoundIcon() {
+      hallSoundBtn.textContent = window.KidAudio.enabled ? '🔊' : '🔇';
+    }
+    refreshSoundIcon();
+    hallSoundBtn.addEventListener('click', () => {
+      window.KidAudio.toggle();
+      refreshSoundIcon();
+      document.getElementById('parent-sound-toggle').classList.toggle('active', window.KidAudio.enabled);
+    });
+
+    // Parent Long-Press 2 Seconds Trigger
+    const gearBtn = document.getElementById('parent-gear-btn');
+    const ringCircle = document.getElementById('parent-ring-circle');
+    const toast = document.getElementById('parent-toast');
+    let pressTimer = null;
+    let pressStartTime = 0;
+    const PRESS_DURATION = 2000;
+
+    function startPress(e) {
+      pressStartTime = Date.now();
+      ringCircle.style.strokeDashoffset = '125.6';
+      
+      pressTimer = setInterval(() => {
+        const elapsed = Date.now() - pressStartTime;
+        const progress = Math.min(1, elapsed / PRESS_DURATION);
+        ringCircle.style.strokeDashoffset = (125.6 * (1 - progress)).toString();
+
+        if (progress >= 1) {
+          clearInterval(pressTimer);
+          pressTimer = null;
+          openParentModal();
+        }
+      }, 30);
+    }
+
+    function cancelPress() {
+      if (pressTimer) {
+        clearInterval(pressTimer);
+        pressTimer = null;
+        ringCircle.style.strokeDashoffset = '125.6';
+        if (Date.now() - pressStartTime < 1000) {
+          showToast('请按住齿轮 2 秒进入家长设置');
+        }
+      }
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+
+    gearBtn.addEventListener('touchstart', startPress, { passive: true });
+    gearBtn.addEventListener('touchend', cancelPress);
+    gearBtn.addEventListener('mousedown', startPress);
+    gearBtn.addEventListener('mouseup', cancelPress);
+    gearBtn.addEventListener('mouseleave', cancelPress);
+
+    // Parent Modal logic
+    const parentModal = document.getElementById('parent-modal');
+    const parentSoundToggle = document.getElementById('parent-sound-toggle');
+    const btnCloseParent = document.getElementById('btn-close-parent');
+    const btnResetScores = document.getElementById('btn-reset-scores');
+
+    function openParentModal() {
+      parentSoundToggle.classList.toggle('active', window.KidAudio.enabled);
+      buildGameVisibilityList();
+      parentModal.classList.add('active');
+      window.KidAudio.playPowerup();
+    }
+
+    btnCloseParent.addEventListener('click', () => {
+      parentModal.classList.remove('active');
+      window.KidAudio.playTap();
+      applyGameVisibility();
+    });
+
+    parentSoundToggle.addEventListener('click', () => {
+      window.KidAudio.toggle();
+      parentSoundToggle.classList.toggle('active', window.KidAudio.enabled);
+      refreshSoundIcon();
+    });
+
+    btnResetScores.addEventListener('click', () => {
+      if (confirm('确定要清空所有游戏的得分与星星记录吗？')) {
+        games.forEach(g => {
+          localStorage.removeItem(`arcade_score_${g}`);
+          localStorage.removeItem(`arcade_stars_${g}`);
+        });
+        updateBadges();
+        alert('记录已重置！');
+      }
+    });
+
+    const gameNames = {
+      'tower-defense': '🏰 玩具塔防',
+      'rogue-defense': '⚡ 魔法城堡',
+      'drive-mad': '🚙 疯狂大脚车',
+      'pixel-racer': '🏎️ 像素赛车',
+      'f1-racer': '🏁 极速F1赛车',
+      'spaceship': '✈️ 太空小飞机',
+      'meteor': '🚀 躲避陨石',
+      'brick-breaker': '🧱 糖果打砖块',
+      'sky-hopper': '🐝 快乐小蜜蜂',
+      'snake': '🐍 贪吃贪玩蛇',
+      'memory': '🃏 动物翻翻乐',
+      'whack-mole': '🐭 欢乐打地鼠'
+    };
+
+    function buildGameVisibilityList() {
+      const container = document.getElementById('game-visibility-list');
+      container.innerHTML = '';
+      const hiddenGames = JSON.parse(localStorage.getItem('arcade_hidden_games') || '[]');
+
+      games.forEach(g => {
+        const isHidden = hiddenGames.includes(g);
+        const row = document.createElement('div');
+        row.className = 'switch-row';
+        row.innerHTML = `
+          <span>${gameNames[g] || g}</span>
+          <div class="switch-toggle ${isHidden ? '' : 'active'}" data-game="${g}"></div>
+        `;
+        row.querySelector('.switch-toggle').onclick = function() {
+          this.classList.toggle('active');
+          const nowActive = this.classList.contains('active');
+          let currentHidden = JSON.parse(localStorage.getItem('arcade_hidden_games') || '[]');
+          if (nowActive) {
+            currentHidden = currentHidden.filter(item => item !== g);
+          } else {
+            if (!currentHidden.includes(g)) currentHidden.push(g);
+          }
+          localStorage.setItem('arcade_hidden_games', JSON.stringify(currentHidden));
+        };
+        container.appendChild(row);
+      });
+    }
+
+    function applyGameVisibility() {
+      const hiddenGames = JSON.parse(localStorage.getItem('arcade_hidden_games') || '[]');
+      games.forEach(g => {
+        const card = document.querySelector(`.game-card[data-game="${g}"]`);
+        if (card) {
+          card.style.display = hiddenGames.includes(g) ? 'none' : 'flex';
+        }
+      });
+    }
+    applyGameVisibility();
+  </script>
+</body>
+</html>
